@@ -1,6 +1,6 @@
 # Stably Agent Skills
 
-AI agent skills for the [Stably Playwright SDK](https://docs.stably.ai).
+AI agent skills for the [Stably Playwright SDK](https://docs.stably.ai/getting-started/sdk-setup-guide).
 
 ## Available Skills
 
@@ -37,7 +37,7 @@ Stably extends Playwright with AI-powered capabilities for more resilient testin
 
 ## Links
 
-- [Stably Documentation](https://docs.stably.ai)
+- [Stably Documentation](https://docs.stably.ai/getting-started/sdk-setup-guide)
 - [Stably Dashboard](https://app.stably.ai)
 - [Get API Key](https://auth.stably.ai/org/api_keys/)
 - [skills.sh](https://skills.sh)
