@@ -12,7 +12,13 @@ AI agent skills for the [Stably Playwright SDK](https://docs.stably.ai/getting-s
 
 ## Installation
 
-Install a specific skill:
+Install all skills at once:
+
+```bash
+npx skills add stablyai/agent-skills
+```
+
+Or install a specific skill:
 
 ```bash
 # Setup skill - use when installing Stably SDK
