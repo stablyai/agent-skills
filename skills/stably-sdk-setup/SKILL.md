@@ -460,7 +460,7 @@ import { test, expect } from '@stablyai/playwright-test';
 
 test('stably sdk verification', async ({ page }) => {
     await page.goto('https://www.stably.ai');
-    await expect(page).toMatchScreenshotPrompt("the page shows the Stably home page");
+    await expect(page).aiAssert("the page shows the Stably home page");
 });
 ```
 

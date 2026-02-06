@@ -41,9 +41,10 @@ npx skills add https://github.com/stablyai/agent-skills --skill stably-sdk-setup
 
 Stably extends Playwright with AI-powered capabilities for more resilient testing:
 
-- **AI Assertions** - `toMatchScreenshotPrompt()` for dynamic UI verification
+- **AI Assertions** - `aiAssert()` for dynamic UI verification
 - **AI Extraction** - `page.extract()` to pull data from the UI
 - **AI Agent** - `agent.act()` for complex autonomous workflows
+- **AI Locator Finding** - `page.getLocatorsByAI()` to find elements using natural language
 
 ## Links
 
