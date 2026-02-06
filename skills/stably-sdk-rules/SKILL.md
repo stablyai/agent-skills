@@ -3,9 +3,9 @@ name: stably-sdk-rules
 description: |
   AI rules and SDK reference for writing tests with Stably Playwright SDK.
   Use this skill when writing or modifying Playwright tests with Stably AI
-  features. Triggers on tasks involving toMatchScreenshotPrompt, agent.act(),
-  page.extract(), or when deciding between Playwright vs Stably SDK methods.
-  Includes best practices for AI assertions, extraction, and autonomous agents.
+  features. Triggers on tasks involving aiAssert, agent.act(), page.extract(),
+  page.getLocatorsByAI(), or when deciding between Playwright vs Stably SDK methods.
+  Includes best practices for AI assertions, extraction, locator finding, and autonomous agents.
 license: MIT
 metadata:
   author: stably
@@ -29,6 +29,9 @@ import {
   getDirname,         // ESM __dirname equivalent
   getFilename,        // ESM __filename equivalent
 } from "@stablyai/playwright-test";
+
+// Type imports for model selection
+import type { AIModel } from "@stablyai/playwright-test";
 ```
 
 ## Install & Setup
@@ -52,27 +55,50 @@ setApiKey("YOUR_KEY");
 | `STABLY_API_URL` | Custom API endpoint | `https://api.stably.ai` |
 | `STABLY_WS_URL` | Custom WebSocket endpoint | `wss://api.stably.ai/reporter` |
 
+## Model Selection
+
+All AI methods support an optional `model` parameter to specify which AI model to use:
+
+```ts
+import type { AIModel } from "@stablyai/playwright-test";
+
+// Available models:
+// - "openai/o4-mini" - OpenAI's efficient reasoning model
+// - "google/gemini-3-pro-preview" - Google's most capable model
+// - "google/gemini-3-flash-preview" - Google's fast, efficient model
+// - Custom model strings are also supported
+
+// Example usage with different methods:
+await expect(page).aiAssert("Shows dashboard", { model: "openai/o4-mini" });
+const data = await page.extract("Get heading", { model: "google/gemini-3-flash-preview" });
+const { locator } = await page.getLocatorsByAI("the login button", { model: "google/gemini-3-pro-preview" });
+```
+
+If no model is specified, the backend default is used.
+
 ## When to Use Stably SDK vs Playwright
 
 **Prioritization:**
 1. **Test accuracy and stability are the most important factors** - prioritize reliability over cost/speed.
 2. **Otherwise, use Playwright whenever possible** since it's cheaper and faster.
 3. **For interactions:** If the interaction will be hard to express as Playwright or will be too brittle that way (e.g., the scroll amount changes every time), then use `agent.act()`. **Any canvas-related operations, or any drag/click operations that require coordinates, must use `agent.act()`** (more semantic meaning, and less flaky).
-4. **For assertions:** Use Playwright if it fulfills the purpose. But if the assertion is very visual-heavy, use Stably's `toMatchScreenshotPrompt`.
+4. **For assertions:** Use Playwright if it fulfills the purpose. But if the assertion is very visual-heavy, use Stably's `aiAssert`.
 5. **Use Stably SDK methods if it helps your tests pass** - when Playwright methods are insufficient or unreliable.
 
 ## AI Assertions (intent‑based visuals)
 
+> **Note:** `toMatchScreenshotPrompt` is deprecated. Use `aiAssert` instead.
+
 ```ts
-await expect(page).toMatchScreenshotPrompt(
+await expect(page).aiAssert(
   "Shows revenue trend chart and spotlight card",
   { timeout: 30_000 }
 );
 await expect(page.locator(".header"))
-  .toMatchScreenshotPrompt("Nav with avatar and bell icon");
+  .aiAssert("Nav with avatar and bell icon");
 ```
 
-**Signature:** `expect(page|locator).toMatchScreenshotPrompt(prompt: string, options?: ScreenshotOptions)`
+**Signature:** `expect(page|locator).aiAssert(prompt: string, options?: ScreenshotOptions & { model?: AIModel })`
 
 * Use for **dynamic** UIs; keep prompts specific; scope with elements (using locators) when possible.
 * **Consider whether you need `fullPage: true`**: Ask yourself if the assertion requires content beyond the visible viewport (e.g., long scrollable lists, full page layout checks). If only viewport content matters, omit `fullPage: true` — it's faster and cheaper. Use it only when you genuinely need to capture content outside the browser window's visible area.
@@ -101,10 +127,43 @@ const userData = await page.locator(".user-panel").extract("Get user info", { sc
 
 **Signatures:**
 
-* `page.extract(prompt: string): Promise<string>`
-* `page.extract<T extends z.AnyZodObject>(prompt, { schema: T }): Promise<z.output<T>>`
-* `locator.extract(prompt: string): Promise<string>`
-* `locator.extract<T extends z.AnyZodObject>(prompt, { schema: T }): Promise<z.output<T>>`
+* `page.extract(prompt: string, options?: { model?: AIModel }): Promise<string>`
+* `page.extract<T extends z.AnyZodObject>(prompt, { schema: T, model?: AIModel }): Promise<z.output<T>>`
+* `locator.extract(prompt: string, options?: { model?: AIModel }): Promise<string>`
+* `locator.extract<T extends z.AnyZodObject>(prompt, { schema: T, model?: AIModel }): Promise<z.output<T>>`
+
+## AI Locator Finding (accessibility-based)
+
+Use `getLocatorsByAI` to find elements using natural language based on the page's accessibility tree. Requires Playwright v1.54.1+.
+
+```ts
+// Find a single element
+const { locator: loginBtn, count } = await page.getLocatorsByAI("the login button");
+expect(count).toBe(1);
+await loginBtn.click();
+
+// Find multiple elements
+const { locator: cards, count: cardCount } = await page.getLocatorsByAI("all product cards in the grid");
+console.log(`Found ${cardCount} product cards`);
+await expect(cards.first()).toBeVisible();
+
+// With model selection
+const { locator } = await page.getLocatorsByAI("the submit button", {
+  model: "google/gemini-3-flash-preview"
+});
+```
+
+**Signature:** `page.getLocatorsByAI(prompt: string, options?: { model?: AIModel }): Promise<{ locator: Locator, count: number, reason: string }>`
+
+**Returns:**
+* `locator` - Playwright Locator for the found elements (matches nothing if count is 0)
+* `count` - Number of elements found
+* `reason` - AI's explanation of what it found and why
+
+**Best Practices:**
+* Describe elements by their accessible properties (labels, roles, text) rather than visual attributes
+* Use for elements that are hard to locate with traditional selectors
+* Check the `count` to verify expected number of matches before interacting
 
 ## AI Agent (autonomous workflows)
 
@@ -152,7 +211,7 @@ await agent.act(`Login with username ${username}`, { page });
 
 ### Self-Contained Prompts
 
-All prompts to Stably SDK AI methods (agent.act, toMatchScreenshotPrompt, extract) must be self-contained with all necessary information:
+All prompts to Stably SDK AI methods (agent.act, aiAssert, extract) must be self-contained with all necessary information:
 
 1. **No implicit references to outside context** - prompts cannot reference previous actions or state that the AI method doesn't have access to:
    - ❌ Bad: `agent.act("Verify the field you just filled in the form is 4", { page })`
@@ -280,7 +339,7 @@ await page.setInputFiles("input", path.join(__dirname, "fixtures", "file.pdf"));
 
 * **CRITICAL: All locators must use the `.describe()` method** for readability in trace views and test reports. Example: `page.getByRole('button', { name: 'Submit' }).describe('Submit button')` or `page.locator('table tbody tr').first().describe('First table row')`
 * Scope visual checks with locators; keep prompts specific with labels/units.
-* Use `toHaveScreenshot` for stable pixel‑perfect UIs; `toMatchScreenshotPrompt` for dynamic UIs.
+* Use `toHaveScreenshot` for stable pixel‑perfect UIs; `aiAssert` for dynamic UIs.
 * **Be deliberate with `fullPage: true`**: Default to viewport-only screenshots. Only use `fullPage: true` when your assertion genuinely requires content beyond the visible viewport (e.g., verifying footer content on a long page, checking full scrollable lists). Viewport captures are faster and more cost-effective.
 
 ## Troubleshooting
@@ -300,7 +359,7 @@ test("AI‑enhanced dashboard", async ({ page, agent }) => {
   await agent.act("Navigate to settings and enable notifications", { page });
 
   // Use AI assertions for dynamic content
-  await expect(page).toMatchScreenshotPrompt(
+  await expect(page).aiAssert(
     "Dashboard shows revenue chart (>= 6 months) and account spotlight card"
   );
 });
@@ -325,11 +384,11 @@ When creating end-to-end tests, follow these guidelines:
 - Cost and speed are priorities
 
 **Use Stably SDK when:**
-- Visual assertions on dynamic UIs → `toMatchScreenshotPrompt()`
+- Visual assertions on dynamic UIs → `aiAssert()`
 - Complex multi-step workflows → `agent.act()`
 - Canvas interactions or coordinate-based operations → `agent.act()`
 - Data extraction from UI → `page.extract()`
-- Elements are hard to locate reliably
+- Elements are hard to locate reliably → `page.getLocatorsByAI()`
 
 ### 3. Structure the Test
 
@@ -350,7 +409,7 @@ test("descriptive test name", async ({ page, agent }) => {
   await expect(page.getByText('Welcome')).toBeVisible();
 
   // For visual/dynamic assertions:
-  await expect(page).toMatchScreenshotPrompt(
+  await expect(page).aiAssert(
     "Dashboard shows revenue chart and user profile card"
   );
 });
@@ -401,7 +460,7 @@ test("complete checkout process", async ({ page, agent }) => {
   );
 
   // Verify outcome
-  await expect(page).toMatchScreenshotPrompt(
+  await expect(page).aiAssert(
     "Order confirmation page with order number and thank you message"
   );
 });
@@ -413,7 +472,7 @@ test("homepage matches design", async ({ page }) => {
   await page.goto("/");
 
   // AI-powered visual assertion for dynamic content
-  await expect(page).toMatchScreenshotPrompt(
+  await expect(page).aiAssert(
     "Hero section with call-to-action button, feature cards below, and navigation bar at top"
   );
 });

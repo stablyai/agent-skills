@@ -11,14 +11,14 @@ npx skills add stablyai/agent-skills --skill stably-sdk-rules
 ## When to Use
 
 - Writing or modifying Playwright tests with Stably AI features
-- Using `toMatchScreenshotPrompt`, `agent.act()`, or `page.extract()`
+- Using `aiAssert`, `agent.act()`, `page.extract()`, or `page.getLocatorsByAI()`
 - Deciding between Playwright vs Stably SDK methods
 
 ## Key Features
 
 ### AI Assertions
 ```typescript
-await expect(page).toMatchScreenshotPrompt(
+await expect(page).aiAssert(
   "Shows revenue trend chart and spotlight card"
 );
 ```
@@ -31,6 +31,12 @@ const data = await page.extract("Get the order ID");
 ### AI Agent
 ```typescript
 await agent.act("Complete the checkout process", { page });
+```
+
+### AI Locator Finding
+```typescript
+const { locator, count } = await page.getLocatorsByAI("the login button");
+await locator.click();
 ```
 
 ## Related
