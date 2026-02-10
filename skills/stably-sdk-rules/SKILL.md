@@ -4,8 +4,9 @@ description: |
   AI rules and SDK reference for writing tests with Stably Playwright SDK.
   Use this skill when writing or modifying Playwright tests with Stably AI
   features. Triggers on tasks involving aiAssert, agent.act(), page.extract(),
-  page.getLocatorsByAI(), or when deciding between Playwright vs Stably SDK methods.
-  Includes best practices for AI assertions, extraction, locator finding, and autonomous agents.
+  page.getLocatorsByAI(), Inbox (email testing), or when deciding between
+  Playwright vs Stably SDK methods. Includes best practices for AI assertions,
+  extraction, locator finding, autonomous agents, and email inbox testing.
 license: MIT
 metadata:
   author: stably
@@ -32,12 +33,17 @@ import {
 
 // Type imports for model selection
 import type { AIModel } from "@stablyai/playwright-test";
+
+// Email inbox testing
+import { Inbox } from "@stablyai/email";
 ```
 
 ## Install & Setup
 
 ```bash
 npm install @playwright/test @stablyai/playwright-test
+# Optional: install email testing package
+npm install @stablyai/email
 export STABLY_API_KEY=YOUR_KEY
 ```
 
@@ -54,6 +60,8 @@ setApiKey("YOUR_KEY");
 | `STABLY_PROJECT_ID` | Project ID for reporter | (required for reporter) |
 | `STABLY_API_URL` | Custom API endpoint | `https://api.stably.ai` |
 | `STABLY_WS_URL` | Custom WebSocket endpoint | `wss://api.stably.ai/reporter` |
+
+Both `STABLY_API_KEY` and `STABLY_PROJECT_ID` are shared across `@stablyai/playwright-test` and `@stablyai/email`.
 
 ## Model Selection
 
@@ -83,7 +91,8 @@ If no model is specified, the backend default is used.
 2. **Otherwise, use Playwright whenever possible** since it's cheaper and faster.
 3. **For interactions:** If the interaction will be hard to express as Playwright or will be too brittle that way (e.g., the scroll amount changes every time), then use `agent.act()`. **Any canvas-related operations, or any drag/click operations that require coordinates, must use `agent.act()`** (more semantic meaning, and less flaky).
 4. **For assertions:** Use Playwright if it fulfills the purpose. But if the assertion is very visual-heavy, use Stably's `aiAssert`.
-5. **Use Stably SDK methods if it helps your tests pass** - when Playwright methods are insufficient or unreliable.
+5. **For email verification flows:** Use `@stablyai/email` `Inbox` to receive and extract data from emails (OTP codes, magic links, confirmation emails).
+6. **Use Stably SDK methods if it helps your tests pass** - when Playwright methods are insufficient or unreliable.
 
 ## AI Assertions (intent‑based visuals)
 
@@ -244,6 +253,188 @@ All prompts to Stably SDK AI methods (agent.act, aiAssert, extract) must be self
 - ❌ Bad: `"enter the duration of 24*7*60 seconds"`
 - ✅ Good: Calculate in code (`const sum = 24*7*60`), then use `\`enter the duration of ${sum} seconds\``
 
+## Email Inbox Testing
+
+The `@stablyai/email` package provides disposable email inboxes for testing email-dependent flows (OTP codes, verification links, order confirmations, etc.).
+
+```bash
+npm install @stablyai/email
+```
+
+Requires `STABLY_API_KEY` and `STABLY_PROJECT_ID` environment variables (same as `@stablyai/playwright-test`).
+
+### Creating an Inbox
+
+```ts
+import { Inbox } from "@stablyai/email";
+
+const inbox = await Inbox.build({ suffix: `test-${Date.now()}` });
+// Generates address like: "org+test-1706621234567@mail.stably.ai"
+
+console.log(inbox.address);   // Full email address
+console.log(inbox.suffix);    // Applied suffix
+console.log(inbox.createdAt); // Inbox creation timestamp
+```
+
+**`Inbox.build()` Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `suffix` | string (optional) | Test isolation identifier appended to address |
+| `apiKey` | string (optional) | Overrides `STABLY_API_KEY` env var |
+| `projectId` | string (optional) | Overrides `STABLY_PROJECT_ID` env var |
+
+### Waiting for Emails
+
+```ts
+const email = await inbox.waitForEmail({
+  from: "noreply@example.com",
+  subject: "verification",
+  timeoutMs: 60_000,
+});
+```
+
+**`inbox.waitForEmail()` Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from` | string | — | Sender address filter |
+| `subject` | string | — | Subject line filter |
+| `subjectMatch` | `'contains'` \| `'exact'` | `'contains'` | Subject matching mode |
+| `timeoutMs` | number | `120000` | Max wait duration (ms) |
+| `pollIntervalMs` | number | `3000` | Poll frequency (ms) |
+
+Returns an `Email` object or throws `EmailTimeoutError`. Only checks emails received **after** the inbox was created.
+
+### Email Object Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Unique identifier |
+| `mailbox` | string | Container (e.g., `"INBOX"`) |
+| `from` | `{ address, name }` | Sender info |
+| `to` | array | Recipients |
+| `subject` | string | Subject line |
+| `receivedAt` | Date | Delivery timestamp |
+| `text` | string? | Plain text body |
+| `html` | array? | HTML body parts |
+
+### AI Extraction from Emails
+
+Use `inbox.extractFromEmail()` to extract structured data from emails using AI:
+
+**String extraction:**
+```ts
+const { data: otp, reason } = await inbox.extractFromEmail({
+  id: email.id,
+  prompt: "Extract the 6-digit OTP code",
+});
+```
+
+**Structured extraction with Zod:**
+```ts
+import { z } from "zod";
+
+const { data } = await inbox.extractFromEmail({
+  id: email.id,
+  prompt: "Extract verification URL and expiration",
+  schema: z.object({
+    url: z.string().url(),
+    expiresIn: z.string(),
+  }),
+});
+```
+
+**`inbox.extractFromEmail()` Parameters:**
+- `id` (required): Email identifier
+- `prompt` (required): Extraction instruction
+- `schema` (optional): Zod schema for structured output
+
+Returns `{ data, reason }` or throws `EmailExtractionError`.
+
+### Listing & Retrieving Emails
+
+```ts
+// List emails with optional filters
+const { emails, nextCursor } = await inbox.listEmails({
+  from: "notifications@example.com",
+  limit: 10,
+});
+
+// Get a specific email by ID
+const email = await inbox.getEmail(emailId);
+```
+
+**`inbox.listEmails()` Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from` | string | — | Sender filter |
+| `subject` | string | — | Subject filter |
+| `subjectMatch` | `'contains'` \| `'exact'` | `'contains'` | Matching mode |
+| `limit` | number | `20` (max 100) | Result count |
+| `cursor` | string | — | Pagination cursor |
+| `since` | Date | — | Override default time filter |
+| `includeOlder` | boolean | `false` | Include pre-creation emails |
+
+### Cleanup
+
+```ts
+await inbox.deleteEmail(email.id);  // Delete single email
+await inbox.deleteAllEmails();       // Delete all emails in this inbox
+```
+
+Only deletes inbox-scoped emails, not the entire org mailbox.
+
+### Playwright Fixture Pattern
+
+Create a reusable `inbox` fixture for test isolation and automatic cleanup:
+
+```ts
+import { test as base } from "@stablyai/playwright-test";
+import { Inbox } from "@stablyai/email";
+
+const test = base.extend<{ inbox: Inbox }>({
+  inbox: async ({}, use, testInfo) => {
+    const inbox = await Inbox.build({ suffix: `test-${testInfo.testId}` });
+    await use(inbox);
+    await inbox.deleteAllEmails();
+  },
+});
+
+test("OTP login flow", async ({ page, inbox }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").describe("Email input").fill(inbox.address);
+  await page.getByRole("button", { name: "Send OTP" }).describe("Send OTP button").click();
+
+  const email = await inbox.waitForEmail({
+    subject: "verification code",
+    timeoutMs: 60_000,
+  });
+
+  const { data: otp } = await inbox.extractFromEmail({
+    id: email.id,
+    prompt: "Extract the 6-digit OTP code",
+  });
+
+  await page.getByLabel("OTP").describe("OTP input").fill(otp);
+  await page.getByRole("button", { name: "Verify" }).describe("Verify button").click();
+  await expect(page).toHaveURL("/dashboard");
+});
+```
+
+### Email Testing Best Practices
+
+* **Always use unique suffixes** (e.g., `testInfo.testId` or `Date.now()`) for parallel test isolation.
+* **Use the fixture pattern** for automatic cleanup after each test.
+* **Keep `timeoutMs` reasonable** — default is 120s, but 60s is usually sufficient.
+* **Prefer `waitForEmail`** over polling with `listEmails` — it handles retry logic automatically.
+* **Use structured extraction with Zod schemas** when you need typed data (URLs, codes, dates).
+* **Common extraction prompts:**
+  - `"Extract the OTP or verification code"`
+  - `"Extract the sign-in or verification URL"`
+  - `"Extract the order number and delivery date"`
+
 ## CI Reporter / Cloud
 
 ```bash
@@ -389,6 +580,7 @@ When creating end-to-end tests, follow these guidelines:
 - Canvas interactions or coordinate-based operations → `agent.act()`
 - Data extraction from UI → `page.extract()`
 - Elements are hard to locate reliably → `page.getLocatorsByAI()`
+- Email verification flows (OTP, magic links, confirmations) → `Inbox` from `@stablyai/email`
 
 ### 3. Structure the Test
 
@@ -463,6 +655,38 @@ test("complete checkout process", async ({ page, agent }) => {
   await expect(page).aiAssert(
     "Order confirmation page with order number and thank you message"
   );
+});
+```
+
+**Email Verification Flow:**
+```ts
+import { Inbox } from "@stablyai/email";
+
+test("signup with email verification", async ({ page }) => {
+  const inbox = await Inbox.build({ suffix: `signup-${Date.now()}` });
+
+  await page.goto("/signup");
+  await page.getByLabel("Email").describe("Email input").fill(inbox.address);
+  await page.getByLabel("Password").describe("Password input").fill("SecurePass123!");
+  await page.getByRole("button", { name: "Sign Up" }).describe("Sign up button").click();
+
+  // Wait for verification email
+  const email = await inbox.waitForEmail({
+    subject: "verify your email",
+    timeoutMs: 60_000,
+  });
+
+  // Extract the verification link using AI
+  const { data: verifyUrl } = await inbox.extractFromEmail({
+    id: email.id,
+    prompt: "Extract the email verification URL",
+  });
+
+  await page.goto(verifyUrl);
+  await expect(page).toHaveURL("/welcome");
+
+  // Cleanup
+  await inbox.deleteAllEmails();
 });
 ```
 

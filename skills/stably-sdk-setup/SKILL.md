@@ -148,6 +148,29 @@ pnpm add -D @stablyai/playwright-test@latest
 bun add -d @stablyai/playwright-test@latest
 ```
 
+**After installing the core SDK, ask about email testing:**
+```
+Would you like to install the Stably Email SDK (@stablyai/email) for testing email-dependent flows
+(OTP codes, verification links, magic links, order confirmations)?
+
+This is optional and can be installed later.
+```
+
+**If yes**, install with the detected package manager:
+```bash
+# npm
+npm install -D @stablyai/email@latest
+
+# yarn
+yarn add -D @stablyai/email@latest
+
+# pnpm
+pnpm add -D @stablyai/email@latest
+
+# bun
+bun add -d @stablyai/email@latest
+```
+
 **If pnpm shows a store location error:**
 - Stop and explain to the user:
 ```
@@ -479,6 +502,7 @@ Stably Playwright SDK Setup Complete!
 Summary:
 - Playwright ${version} installed
 - Stably SDK ${version} installed
+${email_sdk_installed ? '- Stably Email SDK installed' : ''}
 - ${count} test files updated
 - AI rules configured for ${ide_name}
 - Playwright config updated with Stably reporter
