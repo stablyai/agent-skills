@@ -4,11 +4,12 @@ description: |
   Expert assistant for the Stably CLI tool. IMPORTANT: This skill MUST be
   invoked whenever you need to run any Playwright test command. Always use
   "npx stably test" instead of "npx playwright test". Use this skill when
-  working with stably commands for creating, running, and fixing Playwright
-  tests using AI. Triggers on: any playwright test execution (e.g.
+  working with stably commands for creating, building, running, and fixing
+  Playwright tests using AI. Triggers on: any playwright test execution (e.g.
   "npx playwright test", "playwright test", "run tests", "run e2e tests"),
-  "create tests with stably", "fix failing tests (from a 'npx stably' test run)", "run stably test",
-  or "use stably cli".
+  "create tests with stably", "build tests with stably", "stably build",
+  "compile prompt files", "fix failing tests (from a 'npx stably' test run)",
+  "run stably test", or "use stably cli".
 license: MIT
 metadata:
   author: stably
@@ -34,11 +35,31 @@ You are an expert assistant for the Stably CLI, a command-line tool that enables
 
 The Stably CLI (`stably`) is a command-line tool for AI-assisted Playwright test management:
 
+- **Interactive Chat**: Run `stably` with no command to enter an interactive AI chat mode for test generation and Q&A
 - **Test Creation**: Generate tests from prompts or branch diffs
-- **Test Building**: Compile human-readable prompt files into test code
-- **Test Execution**: Run Playwright tests with integrated Stably reporting
+- **Test Building**: Compile `.stably.md` prompt files into Playwright test code
+- **Test Execution**: Run Playwright tests with integrated Stably reporting (auto-enables tracing)
 - **Test Repair**: Auto-fix failing tests using AI analysis
 - **Self-Update**: Keep the CLI up to date with `stably upgrade`
+
+## Command Decision Tree
+
+Use this to pick the right command based on intent:
+
+| Intent | Command |
+|--------|---------|
+| "I want to interactively chat about tests" | `stably` (no arguments) |
+| "Generate a test from a description" | `stably create "description"` |
+| "Generate tests for my current branch changes" | `stably create` (no prompt — infers from diff) |
+| "Compile my `.stably.md` spec files into tests" | `stably build` |
+| "Run my tests" | `stably test` |
+| "Fix failing tests from the last run" | `stably fix` |
+| "Set up Stably in a new project" | `stably init` |
+| "Install browsers" | `stably install` |
+
+**When to use `create` vs `build`:**
+- Use `stably create` for one-off test generation from a prompt or branch diff. It produces test files directly.
+- Use `stably build` when you maintain `.stably.md` prompt spec files and want a repeatable compile step (prompt → test code). It uses content hashing to skip unchanged files.
 
 ## First: Check if Stably CLI is Installed
 
@@ -78,7 +99,40 @@ stably --version
 
 ---
 
+## Global Options
+
+These options can be used with any command:
+
+| Option | Description |
+|--------|-------------|
+| `--cwd <path>` / `-C` | Change working directory before running the command |
+| `--env-file <path>` | Load environment variables from a file (can be repeated) |
+| `--verbose` / `-v` | Enable verbose logging output |
+| `--no-telemetry` | Disable error telemetry collection |
+
+**Example:**
+```bash
+stably --cwd /path/to/project test
+stably --env-file .env.test test
+stably -v fix
+```
+
+---
+
 ## Core Commands Reference
+
+### Interactive Chat Mode
+
+#### `stably` (no command)
+Run `stably` with no arguments to enter an interactive AI chat session for test generation and Q&A.
+
+```bash
+stably
+```
+
+This opens a conversational interface where you can ask questions, generate tests interactively, and get help with your test suite.
+
+---
 
 ### Authentication Commands
 
@@ -127,11 +181,15 @@ This command will:
 
 ### Test Creation
 
-#### `stably create [prompt]`
-Generate a test from a prompt. If the prompt is omitted, it automatically infers what to test from the current branch diff.
+#### `stably create [prompt...]`
+Generate a test from a prompt. The prompt is variadic — you can pass it with or without quotes. If the prompt is omitted, it automatically infers what to test from the current branch diff.
 
 ```bash
+# With quotes
 stably create "test user login flow with email and password"
+
+# Without quotes (words are concatenated automatically)
+stably create test user login flow with email and password
 ```
 
 **Options:**
@@ -166,6 +224,107 @@ stably create "test all CRUD operations on the users API"
 
 ---
 
+### Test Building
+
+#### `stably build [input...] [options]`
+Compile natural language test specifications (`.stably.md` files) into executable Playwright tests (`.spec.ts` files). This is a prompt-to-test compiler that fits into the workflow: `stably plan` → `stably build` → `stably test` → `stably fix`.
+
+```bash
+stably build [input...] [options]
+
+Arguments:
+  input                    Prompt file(s) or folder (.stably.md)
+
+Options:
+  --force                  Force regeneration even if prompt is unchanged
+  -h, --help              Show help message
+```
+
+**Examples:**
+
+```bash
+# Build a single prompt file
+stably build prompts/login.stably.md
+
+# Build all .stably.md files in a folder
+stably build specs/
+
+# Build multiple files
+stably build file1.stably.md file2.stably.md
+
+# Force rebuild (skip hash cache)
+stably build --force specs/
+
+# Auto-discover all .stably.md files tracked by git
+stably build
+```
+
+**How it works:**
+1. Discovers `.stably.md` files from arguments, folders, or git tracking
+2. Computes a SHA-256 hash of prompt content to enable smart caching
+3. Skips regeneration if the prompt hasn't changed (override with `--force`)
+4. Runs an AI agent session to compile prompts into Playwright test code
+5. Prepends a generated header with metadata (`@prompt-hash`, `@prompt-file`, `@built-at`)
+
+**Prompt file format (`.stably.md`):**
+
+Plain markdown with optional YAML frontmatter:
+
+```markdown
+---
+name: Authentication Flows
+priority: medium
+---
+
+# Authentication Flows
+
+## Shared Components
+Create reusable components...
+
+## Test: Standard email login
+1. Navigate to /login
+2. Enter valid credentials
+3. Click submit
+4. Verify redirect to /dashboard
+5. Verify user name appears in header
+
+## Test: OAuth flow with Google
+1. Navigate to /login
+2. Click "Sign in with Google"
+...
+```
+
+**Guidelines for writing prompt files:**
+- Use business language (not code or selectors)
+- No specific URLs, hardcoded data, or locators
+- Each `## Test:` section defines one test scenario
+- Keep specs plain markdown, complete and self-contained
+
+**Generated output format:**
+
+```typescript
+/**
+ * @generated by stably build
+ * @prompt-hash sha256:abc123def456...
+ * @prompt-file prompts/login.stably.md
+ * @built-at 2026-02-06T10:30:00Z
+ *
+ * DO NOT EDIT MANUALLY - regenerate with: stably build prompts/login.stably.md --force
+ */
+
+import { test, expect } from '@playwright/test';
+
+test.describe('Authentication Flows', () => {
+  test('Standard email login', async ({ page }) => {
+    // Generated test code...
+  });
+});
+```
+
+**Auto-fixing:** The command auto-renames `.md` files to `.stably.md` and ensures YAML frontmatter includes required fields (`name`, `priority`).
+
+---
+
 ### Test Execution
 
 #### `stably test`
@@ -175,7 +334,7 @@ Execute Playwright tests with the integrated Stably reporter.
 stably test
 ```
 
-This is the recommended method for running tests as it automatically configures the Stably reporter.
+This is the recommended method for running tests as it automatically configures the Stably reporter and **auto-enables `--trace=on`** (even if not set in your Playwright config). This ensures traces are always captured for `stably fix` to work.
 
 **All standard Playwright CLI options are supported:**
 
@@ -204,7 +363,11 @@ stably test tests/login.spec.ts
 ### Test Repair
 
 #### `stably fix [runId]`
-Fix failing tests from a run. Auto-detects the run ID from the last test run or CI environment.
+Fix failing tests from a run. Auto-detects the run ID using this resolution order:
+
+1. **Explicit argument** — the `runId` you pass directly
+2. **CI environment variable** — e.g., `GITHUB_RUN_ID` when running in GitHub Actions
+3. **Last local run** — reads from `.stably/last-run.json` (cached for 24 hours)
 
 ```bash
 # Auto-detect from last test run or CI
@@ -213,6 +376,12 @@ stably fix
 # Specify a run ID explicitly
 stably fix abc123
 ```
+
+**Notes:**
+- Run IDs containing `/` are automatically normalized to `_`
+- A warning is shown if the resolved run ID is older than 24 hours
+- The command requires being in a git repository
+- Exits with an error if no run ID can be determined
 
 The fix command:
 - Analyzes test failures using captured context (screenshots, logs, DOM traces)
@@ -230,9 +399,8 @@ The fix command:
 # Run tests
 stably test
 
-# If failures occur, get the run ID from output
-# Then fix the failing tests
-stably fix run_abc123
+# If failures occur, fix them (auto-detects last run ID)
+stably fix
 ```
 
 ---
@@ -240,10 +408,14 @@ stably fix run_abc123
 ### Browser Management
 
 #### `stably install`
-Install browser dependencies required by Playwright.
+Install browser dependencies required by Playwright. Supports all Playwright `install` options (passed through).
 
 ```bash
+# Install default browsers
 stably install
+
+# Install with system dependencies (recommended for CI)
+stably install --with-deps
 ```
 
 This is equivalent to `npx playwright install` but integrated into the Stably workflow.
@@ -264,7 +436,7 @@ stably upgrade --check
 ```
 
 **Options:**
-- `-c, --check` - Only check for available updates without installing
+- `-c, --check` - Only check for available updates without installing. Exits with code 1 if an update is available (useful for CI scripts).
 
 #### `stably help [command]`
 Show help for a command.
@@ -305,7 +477,9 @@ STABLY_PROJECT_ID=proj_xxxxx
 
 ### Playwright Configuration
 
-For full debugging context, enable tracing in `playwright.config.ts`:
+**Note:** `stably test` auto-enables `--trace=on` at runtime. Setting it in config is still recommended so traces are also captured when running `npx playwright test` directly.
+
+Example `playwright.config.ts`:
 
 ```typescript
 import { defineConfig } from '@playwright/test';
@@ -313,7 +487,7 @@ import { stablyReporter } from '@stablyai/playwright-test';
 
 export default defineConfig({
   use: {
-    trace: 'on', // Required for stably fix to work properly
+    trace: 'on', // Auto-enabled by stably test; set here for direct playwright runs
   },
   reporter: [
     ['list'],
@@ -353,7 +527,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx stably install --with-deps
 
       - name: Run tests
         run: npx stably test
@@ -438,6 +612,23 @@ stably create "test the main user flows"
 stably test
 ```
 
+### Prompt-Driven Test Development
+
+```bash
+# 1. Write test specs in .stably.md files
+# 2. Build them into Playwright tests
+stably build prompts/
+
+# 3. Run the generated tests
+stably test
+
+# 4. Fix any failures
+stably fix
+
+# 5. Iterate - edit prompts and rebuild
+stably build prompts/login.stably.md --force
+```
+
 ### Daily Development
 
 ```bash
@@ -446,6 +637,9 @@ stably create "test the new feature I just built"
 
 # Or infer tests from current branch changes
 stably create
+
+# Or build from existing prompt files
+stably build
 
 # Run all tests
 stably test
@@ -541,16 +735,18 @@ stably fix xxx
 
 | Command | Description |
 |---------|-------------|
+| `stably` | Interactive AI chat mode for test generation and Q&A |
 | `stably help [command]` | Show help for a command |
 | `stably login` | Authenticate via browser |
 | `stably logout` | Clear credentials |
 | `stably whoami` | Show auth status and current project |
 | `stably init` | Initialize Playwright and Stably SDK in project |
-| `stably create [prompt]` | Generate test from prompt (or infer from branch diff) |
-| `stably test` | Run Playwright tests with Stably reporter |
-| `stably fix [runId]` | Fix failing tests (auto-detects from last run or CI) |
-| `stably install` | Install browser dependencies |
-| `stably upgrade` | Upgrade CLI to latest version (`--check` to only check) |
+| `stably create [prompt...]` | Generate test from prompt (or infer from branch diff) |
+| `stably build [input...]` | Compile `.stably.md` prompt files into Playwright tests (`--force` to skip cache) |
+| `stably test` | Run Playwright tests with Stably reporter (auto-enables `--trace=on`) |
+| `stably fix [runId]` | Fix failing tests (resolves run ID: explicit > CI env > last local run) |
+| `stably install` | Install browser dependencies (`--with-deps` for CI) |
+| `stably upgrade` | Upgrade CLI to latest version (`--check` to only check, exits 1 if update available) |
 | `stably --version` | Show CLI version |
 
 ---
@@ -559,15 +755,15 @@ stably fix xxx
 
 1. **Be specific in prompts** - The more detail you provide to `stably create`, the better the generated tests
 
-3. **Enable tracing** - Always set `trace: 'on'` in your Playwright config for best fix command results
+2. **Enable tracing** - Set `trace: 'on'` in your Playwright config for best fix command results (`stably test` auto-enables this, but it's good to set it explicitly for direct Playwright runs too)
 
-4. **Commit generated tests** - Review and commit AI-generated tests to version control
+3. **Commit generated tests** - Review and commit AI-generated tests to version control
 
-5. **Run tests frequently** - Use `stably test` as part of your development workflow
+4. **Run tests frequently** - Use `stably test` as part of your development workflow
 
-6. **Fix tests promptly** - Address failing tests with `stably fix` before they accumulate
+5. **Fix tests promptly** - Address failing tests with `stably fix` before they accumulate
 
-7. **Keep CLI updated** - Run `stably upgrade` regularly or use `stably upgrade --check` to check for updates
+6. **Keep CLI updated** - Run `stably upgrade` regularly or use `stably upgrade --check` to check for updates
 
 ---
 

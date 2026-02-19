@@ -487,7 +487,7 @@ test('stably sdk verification', async ({ page }) => {
 });
 ```
 
-2. Run: `npx playwright test stably-verification.spec.ts`
+2. Run: `npx stably test stably-verification.spec.ts`
 
 3. Report results to the user
 
