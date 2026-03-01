@@ -100,10 +100,20 @@ I'll run: npm install -D @playwright/test@latest
 **WAIT for confirmation before upgrading.**
 
 **If Playwright is NOT installed:**
-- Detect the package manager (check for `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lockb`)
+- Detect the package manager (check for `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`/`bun.lockb`, `package-lock.json`/`npm-shrinkwrap.json`)
 - Navigate to the test directory (or project root) and run:
 ```bash
-npx init playwright@latest
+# npm
+npm init playwright@latest
+
+# pnpm
+pnpm create playwright@latest
+
+# yarn
+yarn create playwright
+
+# bun
+bun create playwright
 ```
 
 **After completing, announce:**
@@ -268,92 +278,186 @@ Proceeding to Step 5...
 ```
 ## Step 5 of 9: Setup AI Rules & Commands
 
-Adding AI rules and commands for code editor integration...
+Adding Stably SDK rules so your AI coding assistant knows when and how to use the SDK...
 ```
 
 **Then automatically:**
 
-Create or append to these files with the content from the `stably-sdk-rules` skill:
+### 5a. CLAUDE.md — thin capability summary (near the test directory)
 
-1. `.cursor/rules/stably-sdk-rules.mdc` in the project root (Cursor rules)
-2. `.cursor/commands/create-e2e-test.md` in the project root (Cursor command)
-3. `CLAUDE.md` in the project root (Claude Code instructions)
-4. `AGENTS.md` in the project root (General AI agents)
+**Placement logic — find the right location:**
+1. Use the test directory identified in Step 1 (e.g. `tests/`, `e2e/`, `test/`)
+2. Check if a `CLAUDE.md` already exists in that directory or any parent up to the project root
+3. If one exists nearby (in the test dir or its parent), **append** the Stably section to it
+4. If none exists near the tests, **create** `CLAUDE.md` in the test directory itself
+5. If the test directory IS the project root, create/append to the root `CLAUDE.md`
 
-**Content source:** Use the full content from the `stably-sdk-rules` skill (available at https://skills.sh or via `npx skills add stably/stably-sdk-rules`).
+The goal: place it as close to the test files as possible so the rules are scoped to test-writing context.
 
-**For Cursor command file** (`.cursor/commands/create-e2e-test.md`), include the "Creating E2E Tests with Stably SDK" section from the rules.
+**Content** (keep it thin — just capabilities + pointer to the full reference):
+
+```markdown
+<!-- ── Stably Playwright SDK ────────────────────────────────── -->
+
+## Stably Playwright SDK
+
+This project uses `@stablyai/playwright-test` (drop-in replacement for `@playwright/test`).
+Always import from `@stablyai/playwright-test`.
+
+### Capabilities
+
+| Method | When to use |
+|---|---|
+| `expect(page\|locator).aiAssert(prompt)` | Visual assertions on dynamic UIs |
+| `page.extract(prompt)` / `locator.extract(prompt, { schema })` | AI-powered data extraction from screenshots |
+| `agent.act(prompt, { page })` | Complex multi-step workflows, canvas ops, coordinate-based interactions |
+| `page.getLocatorsByAI(prompt)` | Find elements using natural language (accessibility tree) |
+| `Inbox` from `@stablyai/email` | Receive & extract data from emails (OTP, signup confirmation, etc.) |
+| Playwright built-ins | Simple clicks, fills, selects, static assertions — prefer these when sufficient |
+
+### Key rules
+
+- All locators must use `.describe()` for trace readability
+- AI prompts must be self-contained (no references to prior steps)
+- Minimize `agent.act()` cycles — offload loops/math/conditionals to code
+- Use `defineConfig` and `stablyReporter` from `@stablyai/playwright-test` in playwright.config.ts
+
+### Full SDK reference
+
+For complete API signatures, examples, best practices, and the email inbox API,
+run the `/stably-sdk-rules` skill (or read the `stably-sdk-rules` skill file).
+```
+
+If the file already contains a `<!-- ── Stably Playwright SDK` section, **replace** it instead of appending.
+
+### 5b. AGENTS.md (same content, same placement logic as 5a)
+
+Many AI tools read AGENTS.md. Apply the same placement logic and content.
+
+### 5c. Cursor rules (`.cursor/rules/stably-sdk-rules.mdc` in project root)
+
+Use the full content from the `stably-sdk-rules` skill.
+
+### 5d. Cursor command (`.cursor/commands/create-e2e-test.md` in project root)
+
+Include the "Creating E2E Tests with Stably SDK" section from the `stably-sdk-rules` skill.
 
 **After completing, announce:**
 ```
-Step 5 Complete: AI rules & commands configured
+Step 5 Complete: AI rules configured
 
-IMPORTANT for Cursor users:
-1. Enable the rules file: Settings -> Cursor Tab -> Rules for AI -> Enable .cursor/rules
-2. Commands are now available - type /create-e2e-test in chat to generate tests
-3. You can also create team-wide commands at https://cursor.com/dashboard?tab=team-content&section=commands
+Files created/updated:
+- CLAUDE.md (in <location>) — Claude Code knows Stably SDK capabilities
+  and will load the full reference via /stably-sdk-rules when writing tests
+- AGENTS.md (in <location>) — Same rules for other AI agents
+- .cursor/rules/stably-sdk-rules.mdc — Full Cursor rules (if applicable)
+- .cursor/commands/create-e2e-test.md — Cursor command (if applicable)
 
-Please confirm once you have enabled the rules file in Cursor settings so we can proceed to Step 6.
+Proceeding to Step 6...
 ```
-
-**WAIT for user's confirmation before proceeding.**
 
 ---
 
-## Step 6: Configure Playwright Config
+## Step 6: Configure playwright.config.ts
 
 **Announce:**
 ```
-## Step 6 of 9: Configure Playwright Config
+## Step 6 of 9: Configure playwright.config.ts
 
-Updating configuration with Stably reporter...
+Updating configuration to use Stably's defineConfig and reporter...
 ```
 
 **Then automatically:**
 
-Find `playwright.config.ts`, `playwright.config.js`, or `playwright.config.mjs`:
+Find `playwright.config.ts`, `playwright.config.js`, or `playwright.config.mjs`.
 
-**If config file exists:**
-Make the following changes:
+### If config file exists
 
-1. Add import: `import { stablyReporter } from '@stablyai/playwright-test';`
+Make these changes (preserve the user's existing settings — only add/replace what's needed):
 
-2. Add to reporter array:
-```
-stablyReporter({
-    apiKey: process.env.STABLY_API_KEY,
-    projectId: process.env.STABLY_PROJECT_ID,
-    // Optional: Scrub sensitive data from traces before upload
-    sensitiveValues: [process.env.SECRET_PASSWORD, process.env.API_SECRET].filter(Boolean),
-})
-```
+1. **Replace the `defineConfig` import.** Change:
+   ```ts
+   import { defineConfig, devices } from '@playwright/test';
+   ```
+   to:
+   ```ts
+   import { defineConfig, stablyReporter } from '@stablyai/playwright-test';
+   import { devices } from '@playwright/test';
+   ```
+   `defineConfig` from `@stablyai/playwright-test` is a drop-in replacement that adds
+   the optional `stably` project property for notifications. `devices` stays from
+   `@playwright/test`.
 
-3. Update use section to enable tracing:
-`trace: 'on'`
+2. **Add Stably reporter** to the `reporter` array (keep existing reporters):
+   ```ts
+   reporter: [
+     ["list"],
+     stablyReporter({
+       apiKey: process.env.STABLY_API_KEY,
+       projectId: process.env.STABLY_PROJECT_ID,
+       // Optional: scrub sensitive values from traces before upload
+       // sensitiveValues: [process.env.SECRET_PASSWORD].filter(Boolean),
+     }),
+   ],
+   ```
 
-4. Check if `dotenv` exists in package.json dependencies or devDependencies. If not installed, install it: `npm install -D dotenv` (or equivalent for detected package manager)
+3. **Enable tracing** in the `use` section:
+   ```ts
+   use: {
+     trace: 'on', // Required for Stably trace uploads
+   },
+   ```
 
-5. Add the dotenv import and config lines at the top of the config file:
+4. **dotenv is optional.** If the project already uses dotenv, leave it. Otherwise, you may add it
+   if the `.env` file is in a subdirectory (e.g., `app/e2e/.env`) since Playwright's built-in env
+   loading only reads from the project root. For root-level `.env` files, Playwright (>=1.28)
+   loads them automatically.
+
+### If config file doesn't exist
+
+Create `playwright.config.ts` with a complete template:
+
 ```typescript
-/**
-* Read environment variables from file.
-* https://github.com/motdotla/dotenv
-*/
-import dotenv from 'dotenv';
-import path from 'path';
+import { defineConfig, stablyReporter } from '@stablyai/playwright-test';
+import { devices } from '@playwright/test';
 
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [
+    ['list'],
+    stablyReporter({
+      apiKey: process.env.STABLY_API_KEY,
+      projectId: process.env.STABLY_PROJECT_ID,
+    }),
+  ],
+  use: {
+    trace: 'on',
+    screenshot: 'on',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+});
 ```
-
-**If config file doesn't exist:**
-- Create a new `playwright.config.ts` (default to TypeScript) with Stably reporter configured
 
 **After completing, announce:**
 ```
-Step 6 Complete: Playwright config updated with Stably reporter
+Step 6 Complete: playwright.config.ts updated
 
-Note: The config is set up to read credentials from environment variables
-(STABLY_API_KEY and STABLY_PROJECT_ID). We'll set those up in the next step.
+Key changes:
+- defineConfig now imported from @stablyai/playwright-test
+- stablyReporter added to reporter array
+- Tracing enabled (required for Stably trace uploads)
+
+Credentials are read from STABLY_API_KEY and STABLY_PROJECT_ID env vars.
+We'll set those up in the next step.
 
 Proceeding to Step 7...
 ```
@@ -438,7 +542,7 @@ Proceeding to Step 8...
 
 Stably SDK is compatible with Playwright MCP. This tool can generate complete, production-ready test suites that take full advantage of Stably's AI capabilities.
 
-Installation command: npm install -g @playwright/mcp
+Installation command: use your package manager's global install (or dlx-style one-shot run)
 Configuration: https://github.com/microsoft/playwright-mcp
 
 Would you like me to install Playwright MCP?
@@ -447,7 +551,12 @@ Would you like me to install Playwright MCP?
 **WAIT for user's decision (yes/no/skip).**
 
 **If yes:**
-Run: `npm install -g @playwright/mcp`
+Run package-manager-appropriate command:
+- npm: `npm install -g @playwright/mcp`
+- pnpm: `pnpm add -g @playwright/mcp`
+- yarn classic: `yarn global add @playwright/mcp`
+- yarn berry: `yarn dlx @playwright/mcp --help` (no global add)
+- bun: `bun add -g @playwright/mcp`
 
 **After completing or skipping, announce:**
 ```
@@ -487,7 +596,11 @@ test('stably sdk verification', async ({ page }) => {
 });
 ```
 
-2. Run: `npx stably test stably-verification.spec.ts`
+2. Run the test using the detected package manager:
+   - npm: `npm exec playwright test stably-verification.spec.ts`
+   - pnpm: `pnpm exec playwright test stably-verification.spec.ts`
+   - yarn: `yarn playwright test stably-verification.spec.ts`
+   - bun: `bunx playwright test stably-verification.spec.ts`
 
 3. Report results to the user
 
@@ -510,7 +623,7 @@ ${email_sdk_installed ? '- Stably Email SDK installed' : ''}
 ${mcp_installed ? '- Playwright MCP installed' : ''}
 
 Next steps:
-1. Run your tests: npx playwright test
+1. Run your tests with your package manager (`npm exec playwright test`, `pnpm exec playwright test`, `yarn playwright test`, or `bunx playwright test`)
 2. View results in Stably Dashboard: https://app.stably.ai
 3. Check out the docs: https://docs.stably.ai
 

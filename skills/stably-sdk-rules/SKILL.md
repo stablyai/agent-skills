@@ -41,9 +41,18 @@ import { Inbox } from "@stablyai/email";
 ## Install & Setup
 
 ```bash
-npm install @playwright/test @stablyai/playwright-test
-# Optional: install email testing package
-npm install @stablyai/email
+# npm
+npm install -D @playwright/test @stablyai/playwright-test
+
+# pnpm
+pnpm add -D @playwright/test @stablyai/playwright-test
+
+# yarn
+yarn add -D @playwright/test @stablyai/playwright-test
+
+# bun
+bun add -d @playwright/test @stablyai/playwright-test
+
 export STABLY_API_KEY=YOUR_KEY
 ```
 
@@ -253,12 +262,24 @@ All prompts to Stably SDK AI methods (agent.act, aiAssert, extract) must be self
 - ❌ Bad: `"enter the duration of 24*7*60 seconds"`
 - ✅ Good: Calculate in code (`const sum = 24*7*60`), then use `\`enter the duration of ${sum} seconds\``
 
-## Email Inbox Testing
+## Email Inbox (`@stablyai/email`)
 
 The `@stablyai/email` package provides disposable email inboxes for testing email-dependent flows (OTP codes, verification links, order confirmations, etc.).
 
+### Install
+
 ```bash
-npm install @stablyai/email
+# npm
+npm install -D @stablyai/email
+
+# pnpm
+pnpm add -D @stablyai/email
+
+# yarn
+yarn add -D @stablyai/email
+
+# bun
+bun add -d @stablyai/email
 ```
 
 Requires `STABLY_API_KEY` and `STABLY_PROJECT_ID` environment variables (same as `@stablyai/playwright-test`).
@@ -438,7 +459,17 @@ test("OTP login flow", async ({ page, inbox }) => {
 ## CI Reporter / Cloud
 
 ```bash
-npm install @stablyai/playwright-test
+# npm
+npm install -D @stablyai/playwright-test
+
+# pnpm
+pnpm add -D @stablyai/playwright-test
+
+# yarn
+yarn add -D @stablyai/playwright-test
+
+# bun
+bun add -d @stablyai/playwright-test
 ```
 
 ```ts
@@ -501,14 +532,28 @@ export default defineConfig({
 
 ```bash
 # Recommended for Stably reporter + auto-heal
+# npm
 npx stably test
+# pnpm
+pnpm dlx stably test
+# yarn berry
+yarn dlx stably test
+# bun
+bunx stably test
 
 # Still supported (requires your reporter/config to be set up)
-npx playwright test
+# npm
+npm exec playwright test
+# pnpm
+pnpm exec playwright test
+# yarn
+yarn playwright test
+# bun
+bunx playwright test
 # All Playwright CLI flags still work (headed, ui, project, file filters…)
 
 # When running tests for debugging/getting stacktraces:
-npx playwright test --reporter=list  # disable HTML reporter, shows terminal output directly
+npm exec playwright test --reporter=list  # or pm-equivalent; disable HTML reporter for direct terminal output
 ```
 
 ## ESM Utilities
