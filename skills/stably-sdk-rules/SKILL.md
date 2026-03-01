@@ -50,9 +50,6 @@ pnpm add -D @playwright/test @stablyai/playwright-test
 # yarn
 yarn add -D @playwright/test @stablyai/playwright-test
 
-# bun
-bun add -d @playwright/test @stablyai/playwright-test
-
 export STABLY_API_KEY=YOUR_KEY
 ```
 
@@ -277,9 +274,6 @@ pnpm add -D @stablyai/email
 
 # yarn
 yarn add -D @stablyai/email
-
-# bun
-bun add -d @stablyai/email
 ```
 
 Requires `STABLY_API_KEY` and `STABLY_PROJECT_ID` environment variables (same as `@stablyai/playwright-test`).
@@ -467,9 +461,6 @@ pnpm add -D @stablyai/playwright-test
 
 # yarn
 yarn add -D @stablyai/playwright-test
-
-# bun
-bun add -d @stablyai/playwright-test
 ```
 
 ```ts
@@ -538,8 +529,6 @@ npx stably test
 pnpm dlx stably test
 # yarn berry
 yarn dlx stably test
-# bun
-bunx stably test
 
 # Still supported (requires your reporter/config to be set up)
 # npm
@@ -548,8 +537,6 @@ npm exec playwright test
 pnpm exec playwright test
 # yarn
 yarn playwright test
-# bun
-bunx playwright test
 # All Playwright CLI flags still work (headed, ui, project, file filters…)
 
 # When running tests for debugging/getting stacktraces:

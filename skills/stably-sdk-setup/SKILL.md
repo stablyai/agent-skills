@@ -100,7 +100,7 @@ I'll run: npm install -D @playwright/test@latest
 **WAIT for confirmation before upgrading.**
 
 **If Playwright is NOT installed:**
-- Detect the package manager (check for `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`/`bun.lockb`, `package-lock.json`/`npm-shrinkwrap.json`)
+- Detect the package manager (check for `pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`/`npm-shrinkwrap.json`)
 - Navigate to the test directory (or project root) and run:
 ```bash
 # npm
@@ -111,9 +111,6 @@ pnpm create playwright@latest
 
 # yarn
 yarn create playwright
-
-# bun
-bun create playwright
 ```
 
 **After completing, announce:**
@@ -153,9 +150,6 @@ yarn add -D @stablyai/playwright-test@latest
 
 # pnpm
 pnpm add -D @stablyai/playwright-test@latest
-
-# bun
-bun add -d @stablyai/playwright-test@latest
 ```
 
 **After installing the core SDK, ask about email testing:**
@@ -176,9 +170,6 @@ yarn add -D @stablyai/email@latest
 
 # pnpm
 pnpm add -D @stablyai/email@latest
-
-# bun
-bun add -d @stablyai/email@latest
 ```
 
 **If pnpm shows a store location error:**
@@ -556,7 +547,6 @@ Run package-manager-appropriate command:
 - pnpm: `pnpm add -g @playwright/mcp`
 - yarn classic: `yarn global add @playwright/mcp`
 - yarn berry: `yarn dlx @playwright/mcp --help` (no global add)
-- bun: `bun add -g @playwright/mcp`
 
 **After completing or skipping, announce:**
 ```
@@ -600,7 +590,6 @@ test('stably sdk verification', async ({ page }) => {
    - npm: `npm exec playwright test stably-verification.spec.ts`
    - pnpm: `pnpm exec playwright test stably-verification.spec.ts`
    - yarn: `yarn playwright test stably-verification.spec.ts`
-   - bun: `bunx playwright test stably-verification.spec.ts`
 
 3. Report results to the user
 
@@ -623,7 +612,7 @@ ${email_sdk_installed ? '- Stably Email SDK installed' : ''}
 ${mcp_installed ? '- Playwright MCP installed' : ''}
 
 Next steps:
-1. Run your tests with your package manager (`npm exec playwright test`, `pnpm exec playwright test`, `yarn playwright test`, or `bunx playwright test`)
+1. Run your tests with your package manager (`npm exec playwright test`, `pnpm exec playwright test`, or `yarn playwright test`)
 2. View results in Stably Dashboard: https://app.stably.ai
 3. Check out the docs: https://docs.stably.ai
 
@@ -656,7 +645,7 @@ Happy testing!
 
 ## Package Installation Guidelines
 
-When installing packages with package managers (npm, pnpm, yarn, bun):
+When installing packages with package managers (npm, pnpm, yarn):
 
 1. **On first attempt failure (store conflicts, permissions, etc.):**
 - Stop immediately and explain the error to the user
