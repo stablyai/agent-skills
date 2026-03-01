@@ -64,8 +64,6 @@ setApiKey("YOUR_KEY");
 |----------|-------------|---------|
 | `STABLY_API_KEY` | API key for authentication | (required) |
 | `STABLY_PROJECT_ID` | Project ID for reporter | (required for reporter) |
-| `STABLY_API_URL` | Custom API endpoint | `https://api.stably.ai` |
-| `STABLY_WS_URL` | Custom WebSocket endpoint | `wss://api.stably.ai/reporter` |
 
 Both `STABLY_API_KEY` and `STABLY_PROJECT_ID` are shared across `@stablyai/playwright-test` and `@stablyai/email`.
 
