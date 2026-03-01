@@ -3,10 +3,9 @@ name: stably-sdk-rules
 description: |
   AI rules and SDK reference for writing tests with Stably Playwright SDK.
   Use this skill when writing or modifying Playwright tests with Stably AI
-  features. Triggers on tasks involving aiAssert, agent.act(), page.extract(),
-  page.getLocatorsByAI(), Inbox (email testing), or when deciding between
-  Playwright vs Stably SDK methods. Includes best practices for AI assertions,
-  extraction, locator finding, autonomous agents, and email inbox testing.
+  features. Triggers on tasks involving toMatchScreenshotPrompt, agent.act(),
+  page.extract(), or when deciding between Playwright vs Stably SDK methods.
+  Includes best practices for AI assertions, extraction, and autonomous agents.
 license: MIT
 metadata:
   author: stably
@@ -30,20 +29,23 @@ import {
   getDirname,         // ESM __dirname equivalent
   getFilename,        // ESM __filename equivalent
 } from "@stablyai/playwright-test";
-
-// Type imports for model selection
-import type { AIModel } from "@stablyai/playwright-test";
-
-// Email inbox testing
-import { Inbox } from "@stablyai/email";
 ```
 
 ## Install & Setup
 
 ```bash
-npm install @playwright/test @stablyai/playwright-test
-# Optional: install email testing package
-npm install @stablyai/email
+# npm
+npm install -D @playwright/test @stablyai/playwright-test
+
+# pnpm
+pnpm add -D @playwright/test @stablyai/playwright-test
+
+# yarn
+yarn add -D @playwright/test @stablyai/playwright-test
+
+# bun
+bun add -d @playwright/test @stablyai/playwright-test
+
 export STABLY_API_KEY=YOUR_KEY
 ```
 
@@ -61,53 +63,27 @@ setApiKey("YOUR_KEY");
 | `STABLY_API_URL` | Custom API endpoint | `https://api.stably.ai` |
 | `STABLY_WS_URL` | Custom WebSocket endpoint | `wss://api.stably.ai/reporter` |
 
-Both `STABLY_API_KEY` and `STABLY_PROJECT_ID` are shared across `@stablyai/playwright-test` and `@stablyai/email`.
-
-## Model Selection
-
-All AI methods support an optional `model` parameter to specify which AI model to use:
-
-```ts
-import type { AIModel } from "@stablyai/playwright-test";
-
-// Available models:
-// - "openai/o4-mini" - OpenAI's efficient reasoning model
-// - "google/gemini-3-pro-preview" - Google's most capable model
-// - "google/gemini-3-flash-preview" - Google's fast, efficient model
-// - Custom model strings are also supported
-
-// Example usage with different methods:
-await expect(page).aiAssert("Shows dashboard", { model: "openai/o4-mini" });
-const data = await page.extract("Get heading", { model: "google/gemini-3-flash-preview" });
-const { locator } = await page.getLocatorsByAI("the login button", { model: "google/gemini-3-pro-preview" });
-```
-
-If no model is specified, the backend default is used.
-
 ## When to Use Stably SDK vs Playwright
 
 **Prioritization:**
 1. **Test accuracy and stability are the most important factors** - prioritize reliability over cost/speed.
 2. **Otherwise, use Playwright whenever possible** since it's cheaper and faster.
-3. **For interactions:** If the interaction will be hard to express as Playwright or will be too brittle that way (e.g., the scroll amount changes every time), then use `agent.act()`. **Any canvas-related operations, or any drag/click operations that require coordinates, must use `agent.act()`** (more semantic meaning, and less flaky).
-4. **For assertions:** Use Playwright if it fulfills the purpose. But if the assertion is very visual-heavy, use Stably's `aiAssert`.
-5. **For email verification flows:** Use `@stablyai/email` `Inbox` to receive and extract data from emails (OTP codes, magic links, confirmation emails).
-6. **Use Stably SDK methods if it helps your tests pass** - when Playwright methods are insufficient or unreliable.
+3. **For interactions:** If the interaction will be hard to express as Playwright or will be too brittle that way (e.g., the scroll amount changes every time), then use `agent.act()`. **Any canvas-related operations, carousels, paginated content, or any drag/click operations that require coordinates, must use `agent.act()`** (more semantic meaning, and less flaky). Avoid brittle iteration patterns (for-loops with arbitrary counts and waitForTimeout) when navigating dynamic content (e.g., auto-advancing carousels); prefer `agent.act()` to find specific content semantically.
+4. **For assertions:** Use Playwright if it fulfills the purpose. But if the assertion is very visual-heavy, use Stably's `toMatchScreenshotPrompt`.
+5. **Use Stably SDK methods if it helps your tests pass** - when Playwright methods are insufficient or unreliable.
 
 ## AI Assertions (intent‑based visuals)
 
-> **Note:** `toMatchScreenshotPrompt` is deprecated. Use `aiAssert` instead.
-
 ```ts
-await expect(page).aiAssert(
+await expect(page).toMatchScreenshotPrompt(
   "Shows revenue trend chart and spotlight card",
   { timeout: 30_000 }
 );
 await expect(page.locator(".header"))
-  .aiAssert("Nav with avatar and bell icon");
+  .toMatchScreenshotPrompt("Nav with avatar and bell icon");
 ```
 
-**Signature:** `expect(page|locator).aiAssert(prompt: string, options?: ScreenshotOptions & { model?: AIModel })`
+**Signature:** `expect(page|locator).toMatchScreenshotPrompt(prompt: string, options?: ScreenshotOptions)`
 
 * Use for **dynamic** UIs; keep prompts specific; scope with elements (using locators) when possible.
 * **Consider whether you need `fullPage: true`**: Ask yourself if the assertion requires content beyond the visible viewport (e.g., long scrollable lists, full page layout checks). If only viewport content matters, omit `fullPage: true` — it's faster and cheaper. Use it only when you genuinely need to capture content outside the browser window's visible area.
@@ -136,56 +112,14 @@ const userData = await page.locator(".user-panel").extract("Get user info", { sc
 
 **Signatures:**
 
-* `page.extract(prompt: string, options?: { model?: AIModel }): Promise<string>`
-* `page.extract<T extends z.AnyZodObject>(prompt, { schema: T, model?: AIModel }): Promise<z.output<T>>`
-* `locator.extract(prompt: string, options?: { model?: AIModel }): Promise<string>`
-* `locator.extract<T extends z.AnyZodObject>(prompt, { schema: T, model?: AIModel }): Promise<z.output<T>>`
+* `page.extract(prompt: string): Promise<string>`
+* `page.extract<T extends ZodType>(prompt, { schema: T }): Promise<z.output<T>>`
+* `locator.extract(prompt: string): Promise<string>`
+* `locator.extract<T extends ZodType>(prompt, { schema: T }): Promise<z.output<T>>`
 
-## AI Locator Finding (accessibility-based)
-
-Use `getLocatorsByAI` to find elements using natural language based on the page's accessibility tree. Requires Playwright v1.54.1+.
-
-```ts
-// Find a single element
-const { locator: loginBtn, count } = await page.getLocatorsByAI("the login button");
-expect(count).toBe(1);
-await loginBtn.click();
-
-// Find multiple elements
-const { locator: cards, count: cardCount } = await page.getLocatorsByAI("all product cards in the grid");
-console.log(`Found ${cardCount} product cards`);
-await expect(cards.first()).toBeVisible();
-
-// With model selection
-const { locator } = await page.getLocatorsByAI("the submit button", {
-  model: "google/gemini-3-flash-preview"
-});
-```
-
-**Signature:** `page.getLocatorsByAI(prompt: string, options?: { model?: AIModel }): Promise<{ locator: Locator, count: number, reason: string }>`
-
-**Returns:**
-* `locator` - Playwright Locator for the found elements (matches nothing if count is 0)
-* `count` - Number of elements found
-* `reason` - AI's explanation of what it found and why
-
-**Best Practices:**
-* Describe elements by their accessible properties (labels, roles, text) rather than visual attributes
-* Use for elements that are hard to locate with traditional selectors
-* Check the `count` to verify expected number of matches before interacting
+> **Note:** The `schema` option requires **zod v4** (`npm install zod@^4`). Any Zod type is accepted (objects, arrays, primitives), not just `z.object()`.
 
 ## AI Agent (autonomous workflows)
-
-### When Test Generation Uses `agent.act()` vs Raw Playwright
-
-Stably's test generation agent intelligently chooses between raw Playwright code and `agent.act()`:
-
-- **For repeatable, stable actions**: The test generation agent will try to turn these into raw Playwright code when first generating tests. Raw Playwright is faster and more cost-effective.
-- **For dynamic or unstable pages**: If the agent finds that the page changes frequently and it can't find stable Playwright selectors/code for an action, it will use `agent.act()` instead.
-
-This means you may see a mix of both in generated tests—this is intentional and optimizes for reliability while keeping costs down where possible.
-
-### Using the Agent Fixture
 
 Use the `agent` fixture to execute complex, human-like workflows:
 
@@ -220,7 +154,7 @@ await agent.act(`Login with username ${username}`, { page });
 
 ### Self-Contained Prompts
 
-All prompts to Stably SDK AI methods (agent.act, aiAssert, extract) must be self-contained with all necessary information:
+All prompts to Stably SDK AI methods (agent.act, toMatchScreenshotPrompt, extract) must be self-contained with all necessary information:
 
 1. **No implicit references to outside context** - prompts cannot reference previous actions or state that the AI method doesn't have access to:
    - ❌ Bad: `agent.act("Verify the field you just filled in the form is 4", { page })`
@@ -253,142 +187,100 @@ All prompts to Stably SDK AI methods (agent.act, aiAssert, extract) must be self
 - ❌ Bad: `"enter the duration of 24*7*60 seconds"`
 - ✅ Good: Calculate in code (`const sum = 24*7*60`), then use `\`enter the duration of ${sum} seconds\``
 
-## Email Inbox Testing
+## Email Inbox (`@stablyai/email`)
 
-The `@stablyai/email` package provides disposable email inboxes for testing email-dependent flows (OTP codes, verification links, order confirmations, etc.).
+Receive and extract data from emails in tests — useful for OTP verification, signup confirmation, password resets, etc.
+
+### Install
 
 ```bash
-npm install @stablyai/email
+# npm
+npm install -D @stablyai/email
+
+# pnpm
+pnpm add -D @stablyai/email
+
+# yarn
+yarn add -D @stablyai/email
+
+# bun
+bun add -d @stablyai/email
 ```
 
-Requires `STABLY_API_KEY` and `STABLY_PROJECT_ID` environment variables (same as `@stablyai/playwright-test`).
+Requires `STABLY_API_KEY` and `STABLY_PROJECT_ID` environment variables (same as the main SDK).
 
-### Creating an Inbox
+### Create an Inbox
 
 ```ts
 import { Inbox } from "@stablyai/email";
 
-const inbox = await Inbox.build({ suffix: `test-${Date.now()}` });
-// Generates address like: "org+test-1706621234567@mail.stably.ai"
-
-console.log(inbox.address);   // Full email address
-console.log(inbox.suffix);    // Applied suffix
-console.log(inbox.createdAt); // Inbox creation timestamp
+// Each inbox gets a unique address — use a suffix for test isolation
+const inbox = await Inbox.build({ suffix: "signup-test" });
+console.log(inbox.address); // e.g. "signup-test-abc123@inbox.stably.ai"
 ```
 
-**`Inbox.build()` Parameters:**
+**`InboxOptions`:**
+| Option | Type | Description |
+|---|---|---|
+| `suffix` | `string` | Suffix for test isolation (parallel-safe unique addresses) |
+| `apiKey` | `string` | Override `STABLY_API_KEY` |
+| `projectId` | `string` | Override `STABLY_PROJECT_ID` |
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `suffix` | string (optional) | Test isolation identifier appended to address |
-| `apiKey` | string (optional) | Overrides `STABLY_API_KEY` env var |
-| `projectId` | string (optional) | Overrides `STABLY_PROJECT_ID` env var |
-
-### Waiting for Emails
+### Wait for an Email
 
 ```ts
 const email = await inbox.waitForEmail({
   from: "noreply@example.com",
-  subject: "verification",
-  timeoutMs: 60_000,
+  subject: "Your verification code",
+  subjectMatch: "contains", // "contains" | "exact"
+  timeoutMs: 30_000,
 });
 ```
 
-**`inbox.waitForEmail()` Parameters:**
+### Extract Data from an Email (AI-powered)
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `from` | string | — | Sender address filter |
-| `subject` | string | — | Subject line filter |
-| `subjectMatch` | `'contains'` \| `'exact'` | `'contains'` | Subject matching mode |
-| `timeoutMs` | number | `120000` | Max wait duration (ms) |
-| `pollIntervalMs` | number | `3000` | Poll frequency (ms) |
-
-Returns an `Email` object or throws `EmailTimeoutError`. Only checks emails received **after** the inbox was created.
-
-### Email Object Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | string | Unique identifier |
-| `mailbox` | string | Container (e.g., `"INBOX"`) |
-| `from` | `{ address, name }` | Sender info |
-| `to` | array | Recipients |
-| `subject` | string | Subject line |
-| `receivedAt` | Date | Delivery timestamp |
-| `text` | string? | Plain text body |
-| `html` | array? | HTML body parts |
-
-### AI Extraction from Emails
-
-Use `inbox.extractFromEmail()` to extract structured data from emails using AI:
-
-**String extraction:**
 ```ts
-const { data: otp, reason } = await inbox.extractFromEmail({
+// Plain string extraction
+const otp = await inbox.extractFromEmail({
   id: email.id,
-  prompt: "Extract the 6-digit OTP code",
+  prompt: "Extract the 6-digit verification code",
 });
-```
 
-**Structured extraction with Zod:**
-```ts
+// Typed extraction with Zod schema
 import { z } from "zod";
-
-const { data } = await inbox.extractFromEmail({
+const data = await inbox.extractFromEmail({
   id: email.id,
-  prompt: "Extract verification URL and expiration",
-  schema: z.object({
-    url: z.string().url(),
-    expiresIn: z.string(),
-  }),
+  prompt: "Extract the verification code and expiry time",
+  schema: z.object({ code: z.string(), expiresIn: z.string() }),
 });
 ```
 
-**`inbox.extractFromEmail()` Parameters:**
-- `id` (required): Email identifier
-- `prompt` (required): Extraction instruction
-- `schema` (optional): Zod schema for structured output
-
-Returns `{ data, reason }` or throws `EmailExtractionError`.
-
-### Listing & Retrieving Emails
+### List & Clean Up
 
 ```ts
-// List emails with optional filters
-const { emails, nextCursor } = await inbox.listEmails({
-  from: "notifications@example.com",
-  limit: 10,
-});
+const emails = await inbox.listEmails(); // only emails after inbox creation
+const allEmails = await inbox.listEmails({ includeOlder: true });
 
-// Get a specific email by ID
-const email = await inbox.getEmail(emailId);
+await inbox.deleteEmail(email.id);
+await inbox.deleteAllEmails();
 ```
 
-**`inbox.listEmails()` Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `from` | string | — | Sender filter |
-| `subject` | string | — | Subject filter |
-| `subjectMatch` | `'contains'` \| `'exact'` | `'contains'` | Matching mode |
-| `limit` | number | `20` (max 100) | Result count |
-| `cursor` | string | — | Pagination cursor |
-| `since` | Date | — | Override default time filter |
-| `includeOlder` | boolean | `false` | Include pre-creation emails |
-
-### Cleanup
+### Email Object
 
 ```ts
-await inbox.deleteEmail(email.id);  // Delete single email
-await inbox.deleteAllEmails();       // Delete all emails in this inbox
+type Email = {
+  id: string;
+  mailbox: string;
+  from: string;
+  to: string[];
+  subject: string;
+  receivedAt: string;
+  text: string;
+  html: string;
+};
 ```
 
-Only deletes inbox-scoped emails, not the entire org mailbox.
-
-### Playwright Fixture Pattern
-
-Create a reusable `inbox` fixture for test isolation and automatic cleanup:
+### Recommended Fixture Pattern
 
 ```ts
 import { test as base } from "@stablyai/playwright-test";
@@ -396,49 +288,43 @@ import { Inbox } from "@stablyai/email";
 
 const test = base.extend<{ inbox: Inbox }>({
   inbox: async ({}, use, testInfo) => {
-    const inbox = await Inbox.build({ suffix: `test-${testInfo.testId}` });
+    const inbox = await Inbox.build({ suffix: testInfo.testId });
     await use(inbox);
-    await inbox.deleteAllEmails();
+    await inbox.deleteAllEmails(); // cleanup
   },
 });
 
-test("OTP login flow", async ({ page, inbox }) => {
-  await page.goto("/login");
+test("signup sends verification email", async ({ page, inbox }) => {
+  await page.goto("/signup");
   await page.getByLabel("Email").describe("Email input").fill(inbox.address);
-  await page.getByRole("button", { name: "Send OTP" }).describe("Send OTP button").click();
+  await page.getByRole("button", { name: "Sign Up" }).describe("Sign up button").click();
 
-  const email = await inbox.waitForEmail({
-    subject: "verification code",
-    timeoutMs: 60_000,
-  });
-
-  const { data: otp } = await inbox.extractFromEmail({
+  const email = await inbox.waitForEmail({ subject: "Verify your email" });
+  const otp = await inbox.extractFromEmail({
     id: email.id,
-    prompt: "Extract the 6-digit OTP code",
+    prompt: "Extract the 6-digit verification code",
   });
 
-  await page.getByLabel("OTP").describe("OTP input").fill(otp);
+  await page.getByLabel("Code").describe("OTP input").fill(otp);
   await page.getByRole("button", { name: "Verify" }).describe("Verify button").click();
   await expect(page).toHaveURL("/dashboard");
 });
 ```
 
-### Email Testing Best Practices
-
-* **Always use unique suffixes** (e.g., `testInfo.testId` or `Date.now()`) for parallel test isolation.
-* **Use the fixture pattern** for automatic cleanup after each test.
-* **Keep `timeoutMs` reasonable** — default is 120s, but 60s is usually sufficient.
-* **Prefer `waitForEmail`** over polling with `listEmails` — it handles retry logic automatically.
-* **Use structured extraction with Zod schemas** when you need typed data (URLs, codes, dates).
-* **Common extraction prompts:**
-  - `"Extract the OTP or verification code"`
-  - `"Extract the sign-in or verification URL"`
-  - `"Extract the order number and delivery date"`
-
 ## CI Reporter / Cloud
 
 ```bash
-npm install @stablyai/playwright-test
+# npm
+npm install -D @stablyai/playwright-test
+
+# pnpm
+pnpm add -D @stablyai/playwright-test
+
+# yarn
+yarn add -D @stablyai/playwright-test
+
+# bun
+bun add -d @stablyai/playwright-test
 ```
 
 ```ts
@@ -501,14 +387,28 @@ export default defineConfig({
 
 ```bash
 # Recommended for Stably reporter + auto-heal
+# npm
 npx stably test
+# pnpm
+pnpm dlx stably test
+# yarn berry
+yarn dlx stably test
+# bun
+bunx stably test
 
 # Still supported (requires your reporter/config to be set up)
-npx playwright test
+# npm
+npm exec playwright test
+# pnpm
+pnpm exec playwright test
+# yarn
+yarn playwright test
+# bun
+bunx playwright test
 # All Playwright CLI flags still work (headed, ui, project, file filters…)
 
 # When running tests for debugging/getting stacktraces:
-npx playwright test --reporter=list  # disable HTML reporter, shows terminal output directly
+npm exec playwright test --reporter=list  # or pm-equivalent; disable HTML reporter for direct terminal output
 ```
 
 ## ESM Utilities
@@ -530,7 +430,7 @@ await page.setInputFiles("input", path.join(__dirname, "fixtures", "file.pdf"));
 
 * **CRITICAL: All locators must use the `.describe()` method** for readability in trace views and test reports. Example: `page.getByRole('button', { name: 'Submit' }).describe('Submit button')` or `page.locator('table tbody tr').first().describe('First table row')`
 * Scope visual checks with locators; keep prompts specific with labels/units.
-* Use `toHaveScreenshot` for stable pixel‑perfect UIs; `aiAssert` for dynamic UIs.
+* Use `toHaveScreenshot` for stable pixel‑perfect UIs; `toMatchScreenshotPrompt` for dynamic UIs.
 * **Be deliberate with `fullPage: true`**: Default to viewport-only screenshots. Only use `fullPage: true` when your assertion genuinely requires content beyond the visible viewport (e.g., verifying footer content on a long page, checking full scrollable lists). Viewport captures are faster and more cost-effective.
 
 ## Troubleshooting
@@ -550,7 +450,7 @@ test("AI‑enhanced dashboard", async ({ page, agent }) => {
   await agent.act("Navigate to settings and enable notifications", { page });
 
   // Use AI assertions for dynamic content
-  await expect(page).aiAssert(
+  await expect(page).toMatchScreenshotPrompt(
     "Dashboard shows revenue chart (>= 6 months) and account spotlight card"
   );
 });
@@ -575,12 +475,12 @@ When creating end-to-end tests, follow these guidelines:
 - Cost and speed are priorities
 
 **Use Stably SDK when:**
-- Visual assertions on dynamic UIs → `aiAssert()`
+- Visual assertions on dynamic UIs → `toMatchScreenshotPrompt()`
 - Complex multi-step workflows → `agent.act()`
 - Canvas interactions or coordinate-based operations → `agent.act()`
 - Data extraction from UI → `page.extract()`
-- Elements are hard to locate reliably → `page.getLocatorsByAI()`
-- Email verification flows (OTP, magic links, confirmations) → `Inbox` from `@stablyai/email`
+- Elements are hard to locate reliably
+- Email verification flows (OTP, confirmations) → `Inbox` from `@stablyai/email`
 
 ### 3. Structure the Test
 
@@ -601,7 +501,7 @@ test("descriptive test name", async ({ page, agent }) => {
   await expect(page.getByText('Welcome')).toBeVisible();
 
   // For visual/dynamic assertions:
-  await expect(page).aiAssert(
+  await expect(page).toMatchScreenshotPrompt(
     "Dashboard shows revenue chart and user profile card"
   );
 });
@@ -652,41 +552,9 @@ test("complete checkout process", async ({ page, agent }) => {
   );
 
   // Verify outcome
-  await expect(page).aiAssert(
+  await expect(page).toMatchScreenshotPrompt(
     "Order confirmation page with order number and thank you message"
   );
-});
-```
-
-**Email Verification Flow:**
-```ts
-import { Inbox } from "@stablyai/email";
-
-test("signup with email verification", async ({ page }) => {
-  const inbox = await Inbox.build({ suffix: `signup-${Date.now()}` });
-
-  await page.goto("/signup");
-  await page.getByLabel("Email").describe("Email input").fill(inbox.address);
-  await page.getByLabel("Password").describe("Password input").fill("SecurePass123!");
-  await page.getByRole("button", { name: "Sign Up" }).describe("Sign up button").click();
-
-  // Wait for verification email
-  const email = await inbox.waitForEmail({
-    subject: "verify your email",
-    timeoutMs: 60_000,
-  });
-
-  // Extract the verification link using AI
-  const { data: verifyUrl } = await inbox.extractFromEmail({
-    id: email.id,
-    prompt: "Extract the email verification URL",
-  });
-
-  await page.goto(verifyUrl);
-  await expect(page).toHaveURL("/welcome");
-
-  // Cleanup
-  await inbox.deleteAllEmails();
 });
 ```
 
@@ -696,7 +564,7 @@ test("homepage matches design", async ({ page }) => {
   await page.goto("/");
 
   // AI-powered visual assertion for dynamic content
-  await expect(page).aiAssert(
+  await expect(page).toMatchScreenshotPrompt(
     "Hero section with call-to-action button, feature cards below, and navigation bar at top"
   );
 });
