@@ -274,14 +274,14 @@ Adding Stably SDK rules so your AI coding assistant knows when and how to use th
 
 **Then automatically:**
 
-### 5a. CLAUDE.md — thin capability summary (near the test directory)
+### 5a. claude.md or agents.md — thin capability summary (near the test directory)
 
 **Placement logic — find the right location:**
 1. Use the test directory identified in Step 1 (e.g. `tests/`, `e2e/`, `test/`)
-2. Check if a `CLAUDE.md` already exists in that directory or any parent up to the project root
+2. Check if a `claude.md` or `agents.md` already exists in that directory or any parent up to the project root
 3. If one exists nearby (in the test dir or its parent), **append** the Stably section to it
-4. If none exists near the tests, **create** `CLAUDE.md` in the test directory itself
-5. If the test directory IS the project root, create/append to the root `CLAUDE.md`
+4. If none exists near the tests, **create** `claude.md` in the test directory itself
+5. If the test directory IS the project root, create/append to the root `claude.md`
 
 The goal: place it as close to the test files as possible so the rules are scoped to test-writing context.
 
@@ -321,9 +321,9 @@ run the `/stably-sdk-rules` skill (or read the `stably-sdk-rules` skill file).
 
 If the file already contains a `<!-- ── Stably Playwright SDK` section, **replace** it instead of appending.
 
-### 5b. AGENTS.md (same content, same placement logic as 5a)
+### 5b. agents.md (same content, same placement logic as 5a)
 
-Many AI tools read AGENTS.md. Apply the same placement logic and content.
+Many AI tools read agents.md. Apply the same placement logic and content.
 
 ### 5c. Cursor rules (`.cursor/rules/stably-sdk-rules.mdc` in project root)
 
@@ -338,9 +338,9 @@ Include the "Creating E2E Tests with Stably SDK" section from the `stably-sdk-ru
 Step 5 Complete: AI rules configured
 
 Files created/updated:
-- CLAUDE.md (in <location>) — Claude Code knows Stably SDK capabilities
+- claude.md (in <location>) — Claude Code knows Stably SDK capabilities
   and will load the full reference via /stably-sdk-rules when writing tests
-- AGENTS.md (in <location>) — Same rules for other AI agents
+- agents.md (in <location>) — Same rules for other AI agents
 - .cursor/rules/stably-sdk-rules.mdc — Full Cursor rules (if applicable)
 - .cursor/commands/create-e2e-test.md — Cursor command (if applicable)
 
