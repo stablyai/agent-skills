@@ -9,7 +9,8 @@ description: |
   "npx playwright test", "playwright test", "run tests", "run e2e tests"),
   "create tests with stably",
   "fix failing tests (from a 'npx stably' test run)",
-  "run stably test", or "use stably cli".
+  "run stably test", "use stably cli", "stably env", "stably --env",
+  "remote environments", or "environment variables".
 license: MIT
 metadata:
   author: stably
@@ -30,6 +31,7 @@ You are an expert assistant for the Stably CLI, a command-line tool that enables
 | `npx playwright test --headed` | `npx stably test --headed` |
 | `npx playwright test tests/login.spec.ts` | `npx stably test tests/login.spec.ts` |
 | `npx playwright test --grep="login"` | `npx stably test --grep="login"` |
+| Manually setting env vars for different environments | `npx stably --env staging test` |
 
 ## Overview
 
@@ -51,9 +53,12 @@ Use this to pick the right command based on intent:
 | "Generate a test from a description" | `stably create "description"` |
 | "Generate tests for my current branch changes" | `stably create` (no prompt — infers from diff) |
 | "Run my tests" | `stably test` |
+| "Run tests with a remote environment" | `stably --env staging test` |
 | "Fix failing tests from the last run" | `stably fix` |
 | "Set up Stably in a new project" | `stably init` |
 | "Install browsers" | `stably install` |
+| "List remote environments" | `stably env list` |
+| "Inspect a remote environment's variables" | `stably env inspect <name>` |
 
 ## First: Check if Stably CLI is Installed
 
@@ -100,13 +105,21 @@ These options can be used with any command:
 | Option | Description |
 |--------|-------------|
 | `--cwd <path>` / `-C` | Change working directory before running the command |
-| `--env-file <path>` | Load environment variables from a file (can be repeated) |
+| `--env <name>` | Load environment variables from a remote Stably environment (created on the dashboard) |
+| `--env-file <path>` | Load environment variables from a local file (can be repeated) |
 | `--verbose` / `-v` | Enable verbose logging output |
 | `--no-telemetry` | Disable error telemetry collection |
+
+**Environment variable precedence** (highest wins):
+1. Stably auth env (`STABLY_API_KEY`, etc.)
+2. Remote environment (`--env`)
+3. Local env files (`--env-file`)
+4. `process.env` (system/shell environment)
 
 **Example:**
 ```bash
 stably --cwd /path/to/project test
+stably --env staging test
 stably --env-file .env.test test
 stably -v fix
 ```
@@ -298,6 +311,58 @@ stably fix
 
 ---
 
+### Remote Environments
+
+Stably supports remote environments — named collections of environment variables managed on the Stably dashboard. These are useful for storing `BASE_URL`, API keys, feature flags, and other config per environment (staging, production, etc.) without committing them to `.env` files or CI secrets.
+
+#### `stably env list`
+List all environments available in the current project.
+
+```bash
+stably env list
+```
+
+Shows environment names, whether each is the default, the number of variables, and optional descriptions.
+
+#### `stably env inspect <name>`
+Show variable metadata for a specific environment. Displays variable names, sensitivity flags, and last-updated timestamps. **Values are never printed** — this is a safe read-only inspection.
+
+```bash
+stably env inspect staging
+stably env inspect production
+```
+
+#### Using `--env` with test commands
+
+The `--env <name>` global option fetches environment variables from a remote Stably environment and injects them into the Playwright test process. This replaces the need for local `.env` files or CI secret configuration for test-specific variables.
+
+```bash
+# Run tests with staging environment variables
+stably --env staging test
+
+# Run tests with production environment, headed mode
+stably --env production test --headed
+
+# Create tests using staging config
+stably --env staging create "test the checkout flow"
+
+# Fix tests with staging context
+stably --env staging fix
+```
+
+**How it works:**
+1. The CLI fetches variable names and values from the Stably API for the named environment
+2. Variables are injected into the spawned Playwright process environment
+3. Sensitive values are automatically tracked and scrubbed from uploaded traces
+4. Remote env variables override `--env-file` and `process.env`, but Stably auth vars (`STABLY_API_KEY`, etc.) take highest precedence
+
+**When to use `--env` vs `--env-file`:**
+- Use `--env` when variables are managed on the Stably dashboard (team-shared, centralized)
+- Use `--env-file` when variables are stored locally in `.env` files
+- Both can be combined — `--env` overrides `--env-file`
+
+---
+
 ### Browser Management
 
 #### `stably install`
@@ -361,12 +426,22 @@ STABLY_PROJECT_ID=your_project_id_here
 2. Create or copy your API key
 3. Get your project ID from the dashboard
 
-**Setting up .env file:**
+**Setting up credentials (choose one):**
+
 ```bash
+# Option 1: Local .env file
 # .env
 STABLY_API_KEY=sk_live_xxxxx
 STABLY_PROJECT_ID=proj_xxxxx
+
+# Option 2: Use remote environments (managed on Stably dashboard)
+# Other test-specific env vars (BASE_URL, etc.) are pulled from the remote environment
+stably --env staging test
 ```
+
+**Additional test variables** (e.g., `BASE_URL`, feature flags, third-party API keys) can be managed via:
+- Local `.env` files with `--env-file`
+- Remote Stably environments with `--env` (recommended for teams — see `stably env list`)
 
 ### Playwright Configuration
 
@@ -423,7 +498,10 @@ jobs:
         run: npx stably install --with-deps
 
       - name: Run tests
-        run: npx stably test
+        # Option A: Use --env to pull variables from a remote Stably environment
+        run: npx stably --env staging test
+        # Option B: Pass env vars directly (comment out Option A and uncomment below)
+        # run: npx stably test
         env:
           STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
           STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
@@ -432,7 +510,7 @@ jobs:
 
       - name: Auto-fix failing tests
         if: steps.test.outcome == 'failure'
-        run: npx stably fix
+        run: npx stably --env staging fix
         env:
           STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
           STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
@@ -616,7 +694,10 @@ stably fix xxx
 | `stably init` | Initialize Playwright and Stably SDK in project |
 | `stably create [prompt...]` | Generate test from prompt (or infer from branch diff) |
 | `stably test` | Run Playwright tests with Stably reporter (auto-enables `--trace=on`) |
+| `stably --env <name> test` | Run tests with variables from a remote Stably environment |
 | `stably fix [runId]` | Fix failing tests (resolves run ID: explicit > CI env > last local run) |
+| `stably env list` | List available remote environments in the current project |
+| `stably env inspect <name>` | Show variable metadata for an environment (names only, no values) |
 | `stably install` | Install browser dependencies (`--with-deps` for CI) |
 | `stably upgrade` | Upgrade CLI to latest version (`--check` to only check, exits 1 if update available) |
 | `stably --version` | Show CLI version |
