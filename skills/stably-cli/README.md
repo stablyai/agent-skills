@@ -12,6 +12,7 @@ npx skills add stablyai/agent-skills --skill stably-cli
 
 - Creating Playwright tests with AI using `stably create`
 - Running tests with `stably test`
+- Running tests with remote environments using `stably --env <name> test`
 - Auto-fixing failing tests with `stably fix`
 - Using the interactive Stably agent
 - Setting up Stably CLI in a new environment
@@ -25,6 +26,7 @@ Provides guidance for all Stably CLI commands:
 - **Interactive Agent**: `stably` for conversational test work
 - **Test Creation**: `stably create <prompt>` for headless test generation
 - **Test Execution**: `stably test` with Stably reporter
+- **Remote Environments**: `stably env list`, `stably env inspect`, and `stably --env <name> test`
 - **Test Repair**: `stably fix [runId]` for AI-powered fixes
 
 ## Quick Reference
@@ -35,6 +37,8 @@ Provides guidance for all Stably CLI commands:
 | `stably init` | Initialize project |
 | `stably create <prompt>` | Create tests with AI |
 | `stably test` | Run tests |
+| `stably --env <name> test` | Run tests with named remote environment variables |
+| `stably env inspect <name>` | Inspect available variables in a remote env |
 | `stably fix [runId]` | Auto-fix failures |
 
 ## Related

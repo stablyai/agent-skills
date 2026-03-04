@@ -6,9 +6,10 @@ AI agent skills for the [Stably Playwright SDK](https://docs.stably.ai/getting-s
 
 | Skill | Description | Install |
 |-------|-------------|---------|
+| [playwright-test-data-isolation](./skills/playwright-test-data-isolation) | Safe Playwright strategy for shared DB/shared accounts with deterministic cleanup and parallel-safe data ownership | `npx skills add stablyai/agent-skills --skill playwright-test-data-isolation` |
 | [stably-sdk-setup](./skills/stably-sdk-setup) | Setup assistant for Stably Playwright SDK | `npx skills add stablyai/agent-skills --skill stably-sdk-setup` |
 | [stably-sdk-rules](./skills/stably-sdk-rules) | AI rules for writing tests with Stably SDK | `npx skills add stablyai/agent-skills --skill stably-sdk-rules` |
-| [stably-cli](./skills/stably-cli) | Expert assistant for Stably CLI commands | `npx skills add stablyai/agent-skills --skill stably-cli` |
+| [stably-cli](./skills/stably-cli) | Expert assistant for Stably CLI commands (including remote envs via `--env`) | `npx skills add stablyai/agent-skills --skill stably-cli` |
 
 ## Installation
 
@@ -21,6 +22,9 @@ npx skills add stablyai/agent-skills
 Or install a specific skill:
 
 ```bash
+# Playwright shared-environment safety/data isolation strategy
+npx skills add stablyai/agent-skills --skill playwright-test-data-isolation
+
 # Setup skill - use when installing Stably SDK
 npx skills add stablyai/agent-skills --skill stably-sdk-setup
 
