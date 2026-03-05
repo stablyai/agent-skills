@@ -1,6 +1,6 @@
 # stably-verify
 
-Run existing Playwright tests via Stably CLI to verify code changes work correctly.
+Verify that your application works correctly using `stably verify` — describe expected behavior in plain English, get a PASS/FAIL/INCONCLUSIVE verdict from a real browser.
 
 ## Installation
 
@@ -11,31 +11,33 @@ npx skills add stablyai/agent-skills --skill stably-verify
 ## When to Use
 
 - After making code changes that need validation
-- When an AI agent needs to confirm its changes don't break anything
-- As a verification step in an iterate-and-verify development loop
-- When refactoring code that has existing test coverage
+- When an AI agent needs to confirm a feature works in a real browser
+- As a verification step in a build-then-verify iteration loop
+- Quick feature checks without writing test files
 
 ## What It Does
 
-Creates a tight feedback loop for AI agents:
+`stably verify` launches an AI agent that:
 
-1. **Run tests** - Execute `stably test` (scoped to relevant files)
-2. **Analyze failures** - Read error output and traces
-3. **Fix application code** - Fix the code, not the tests
-4. **Re-verify** - Run tests again until all pass
+1. **Navigates** your app in a real browser
+2. **Interacts** with the UI (clicks, fills forms, scrolls)
+3. **Takes screenshots** as evidence
+4. **Reports** a structured PASS / FAIL / INCONCLUSIVE verdict
+
+No test files are created — it verifies and reports.
 
 ## Quick Reference
 
 | Command | Description |
 |---------|-------------|
-| `stably test` | Run all tests |
-| `stably test tests/file.spec.ts` | Run specific test file |
-| `stably test --grep "pattern"` | Run tests matching a pattern |
-| `stably test --headed` | Run with visible browser |
-| `stably test \|\| stably fix` | Run tests, auto-fix on failure |
+| `stably verify "description"` | Verify app behavior |
+| `stably verify "..." --url <url>` | Verify with specific starting URL |
+| `stably verify "..." --max-budget 10` | Set budget cap (default: $5) |
+| `stably verify "..." --no-interactive` | Non-interactive mode for CI |
+
+Exit codes: `0` = PASS, `1` = FAIL, `2` = INCONCLUSIVE
 
 ## Related
 
-- [stably-cli](../stably-cli) - Full CLI assistant (create, run, fix)
-- [stably-sdk-rules](../stably-sdk-rules) - AI rules for writing tests
+- [stably-cli](../stably-cli) - Full CLI assistant (create, run, fix, verify)
 - [Verify with AI Agents guide](https://docs.stably.ai/use-cases/verify-with-ai-agents)
