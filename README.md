@@ -10,6 +10,7 @@ AI agent skills for the [Stably Playwright SDK](https://docs.stably.ai/getting-s
 | [stably-sdk-setup](./skills/stably-sdk-setup) | Setup assistant for Stably Playwright SDK | `npx skills add stablyai/agent-skills --skill stably-sdk-setup` |
 | [stably-sdk-rules](./skills/stably-sdk-rules) | AI rules for writing tests with Stably SDK | `npx skills add stablyai/agent-skills --skill stably-sdk-rules` |
 | [stably-cli](./skills/stably-cli) | Expert assistant for Stably CLI commands (including remote envs via `--env`) | `npx skills add stablyai/agent-skills --skill stably-cli` |
+| [stably-verify](./skills/stably-verify) | Run existing tests to verify code changes work — ideal for AI agent iteration loops | `npx skills add stablyai/agent-skills --skill stably-verify` |
 
 ## Installation
 
@@ -33,6 +34,9 @@ npx skills add stablyai/agent-skills --skill stably-sdk-rules
 
 # CLI skill - use when working with stably commands
 npx skills add stablyai/agent-skills --skill stably-cli
+
+# Verify skill - use when validating code changes with existing tests
+npx skills add stablyai/agent-skills --skill stably-verify
 ```
 
 Or install from URL:
