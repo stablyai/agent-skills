@@ -100,8 +100,8 @@ stably fix abc123   # explicit run ID
 
 Verifies app behavior against a natural-language description without generating test files.
 
-- `--url <url>` — target URL (otherwise auto-detected)
-- `--max-budget <n>` — max AI steps
+- `-u, --url <url>` — target URL (otherwise auto-detected)
+- `--max-budget <dollars>` — max budget in USD (default: 5)
 - `--no-interactive` — disable interactive prompts
 
 Exit codes: `0` = PASS, `1` = FAIL, `2` = INCONCLUSIVE.
@@ -116,11 +116,11 @@ stably verify "login page loads" --no-interactive
 
 Lists recent test runs for the current project.
 
-- `--branch <name>` — filter by git branch
-- `--limit <n>` — max results (default 10)
-- `--after <date>` / `--before <date>` — date range filter
-- `--source <source>` — filter by source (e.g. `cli`, `ci`)
-- `--status <status>` — filter by status (e.g. `passed`, `failed`)
+- `-b, --branch <name>` — filter by git branch
+- `-n, --limit <number>` — max results (default 20, max 100)
+- `--after <runId>` / `--before <runId>` — cursor-based pagination by run ID
+- `--source <source>` — filter by source (`local`, `ci`, `web`)
+- `-s, --status <status>` — filter by status (e.g. `passed`, `failed`)
 - `--suite <name>` — filter by test suite
 - `--trigger <trigger>` — filter by trigger type
 - `--json` — output as JSON
