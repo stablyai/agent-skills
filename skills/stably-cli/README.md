@@ -25,6 +25,7 @@ Provides guidance for all Stably CLI commands:
 
 - **Authentication**: `stably login`, `stably logout`, `stably whoami`
 - **Setup**: `stably init`, `stably install`
+- **Interactive Agent**: `stably` (no args) — **human only**, hangs AI agents
 - **Test Creation**: `stably create <prompt>` for headless test generation
 - **Test Execution**: `stably test` with Stably reporter
 - **Remote Environments**: `stably env list`, `stably env inspect`, and `stably --env <name> test`
@@ -36,6 +37,7 @@ Provides guidance for all Stably CLI commands:
 
 | Command | Description |
 |---------|-------------|
+| `stably` | Interactive chat — **do NOT use from AI agents** |
 | `stably init` | Initialize project |
 | `stably create <prompt>` | Create tests with AI |
 | `stably test` | Run tests |
