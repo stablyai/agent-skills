@@ -17,7 +17,6 @@ npx skills add stablyai/agent-skills --skill stably-cli
 - Verifying app behavior with `stably verify`
 - Checking test run history with `stably runs list`
 - Viewing run details with `stably runs view`
-- Using the interactive Stably agent
 - Setting up Stably CLI in a new environment
 
 ## What It Does
