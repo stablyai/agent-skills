@@ -11,6 +11,7 @@ AI agent skills for the [Stably Playwright SDK](https://docs.stably.ai/getting-s
 | [stably-sdk-rules](./skills/stably-sdk-rules) | AI rules for writing tests with Stably SDK | `npx skills add stablyai/agent-skills --skill stably-sdk-rules` |
 | [stably-cli](./skills/stably-cli) | Expert assistant for Stably CLI commands (including remote envs via `--env`) | `npx skills add stablyai/agent-skills --skill stably-cli` |
 | [stably-verify](./skills/stably-verify) | Run existing tests to verify code changes work — ideal for AI agent iteration loops | `npx skills add stablyai/agent-skills --skill stably-verify` |
+| [google-auth-account-setup](./skills/google-auth-account-setup) | Step-by-step Google account setup for automated auth testing with Stably SDK | `npx skills add stablyai/agent-skills --skill google-auth-account-setup` |
 
 ## Installation
 
@@ -37,6 +38,9 @@ npx skills add stablyai/agent-skills --skill stably-cli
 
 # Verify skill - use when validating code changes with existing tests
 npx skills add stablyai/agent-skills --skill stably-verify
+
+# Google auth setup - use when setting up Google accounts for auth testing
+npx skills add stablyai/agent-skills --skill google-auth-account-setup
 ```
 
 Or install from URL:
