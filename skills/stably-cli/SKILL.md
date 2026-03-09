@@ -118,7 +118,7 @@ Lists recent test runs for the current project.
 - `-s, --status <status>` — filter by status (e.g. `passed`, `failed`)
 - `--suite <name>` — filter by test suite
 - `--trigger <trigger>` — filter by trigger type
-- `--json` — output as JSON
+- `--json` — output as JSON (preferred for AI agents)
 
 ```bash
 stably runs list                           # recent runs
@@ -127,11 +127,13 @@ stably runs list --branch main --limit 5   # recent runs on main
 stably runs list --json                    # machine-readable output
 ```
 
+**Agent note:** Always use `--json` for machine-readable output when parsing run data programmatically.
+
 ### `stably runs view <runId> [options]`
 
 Shows details for a specific test run including metadata, issues with root causes, and individual test results.
 
-- `--json` — output as JSON
+- `--json` — output as JSON (preferred for AI agents)
 
 ```bash
 stably runs view abc123
