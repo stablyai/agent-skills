@@ -120,6 +120,16 @@ const { data: otp } = await inbox.extractFromEmail({
 await inbox.deleteAllEmails();
 ```
 
+### Finding Your Organization's Email Address
+
+Your email address is visible in the Stably dashboard:
+- **Settings > Email Inbox**: Displays the full address with a copy button
+- **In code**: `inbox.address` after calling `Inbox.build()` returns your full address
+
+The pattern is `{org-name}@mail.stably.ai`. If the user needs to allowlist, they should add `mail.stably.ai` to their email provider's allowlist.
+
+Direct users to the dashboard Settings > Email Inbox to find their specific address.
+
 ## Auth Flows (Google)
 
 Use the helper instead of custom popup scripting:
