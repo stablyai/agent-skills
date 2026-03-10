@@ -168,17 +168,50 @@ const { data } = await inbox.extractFromEmail({
 });
 ```
 
+#### Inbox Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `address` | string | Full email address (with suffix if provided) |
+| `suffix` | string \| undefined | The suffix passed to `Inbox.build()` |
+| `createdAt` | Date | Inbox creation time; emails before this are auto-filtered |
+
+#### listEmails
+
+```ts
+const { emails, nextCursor } = await inbox.listEmails(options?);
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `from` | string | — | Filter by sender address |
+| `subject` | string | — | Filter by subject |
+| `subjectMatch` | `'contains'` \| `'exact'` | `'contains'` | Subject matching mode |
+| `limit` | number | 20 | Max results (max: 100) |
+| `cursor` | string | — | Pagination cursor from previous `nextCursor` |
+| `since` | Date | — | Override the default creation-time filter |
+| `includeOlder` | boolean | false | Include emails received before inbox creation |
+
 #### Other Methods
 
 ```ts
-const { emails } = await inbox.listEmails();                    // list emails (only after inbox creation)
-const { emails } = await inbox.listEmails({ includeOlder: true }); // include older emails
 const email = await inbox.getEmail(id);                          // get by ID
 await inbox.deleteEmail(email.id);                               // delete single
 await inbox.deleteAllEmails();                                   // delete all (this inbox only)
 ```
 
-Email object properties: `id`, `from` (`{ address, name? }`), `to` (`{ address, name? }[]`), `subject`, `receivedAt`, `text?`, `html?`.
+#### Email Object Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Unique identifier |
+| `mailbox` | string | Container (e.g., `"INBOX"`) |
+| `from` | `{ address: string, name?: string }` | Sender |
+| `to` | `{ address: string, name?: string }[]` | Recipients |
+| `subject` | string | Subject line |
+| `receivedAt` | Date | Arrival timestamp |
+| `text` | string? | Plain text body |
+| `html` | string[]? | HTML body parts |
 
 #### Playwright Fixture Pattern
 
