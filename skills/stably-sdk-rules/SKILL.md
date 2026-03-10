@@ -107,8 +107,12 @@ Good pattern: compute values in code, then pass concrete values into the prompt.
 
 ### `Inbox` (Email Isolation)
 
+Install: `npm install -D @stablyai/email`. Requires `STABLY_API_KEY` and `STABLY_PROJECT_ID` env vars (or pass to `Inbox.build()`).
+
 ```ts
 const inbox = await Inbox.build({ suffix: `test-${Date.now()}` });
+// inbox.address → "my-org+test-1706621234567@mail.stably.ai"
+
 await page.getByLabel("Email").describe("Email input").fill(inbox.address);
 
 const email = await inbox.waitForEmail({ subject: "verification", timeoutMs: 60_000 });
@@ -118,6 +122,117 @@ const { data: otp } = await inbox.extractFromEmail({
 });
 
 await inbox.deleteAllEmails();
+```
+
+#### Inbox.build Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `suffix` | string | Suffix for test isolation (e.g., `"test-123"` → `"org+test-123@mail.stably.ai"`) |
+| `apiKey` | string | Defaults to `STABLY_API_KEY` env var |
+| `projectId` | string | Defaults to `STABLY_PROJECT_ID` env var |
+
+Always use a unique `suffix` per test for parallel isolation. The inbox automatically filters out emails received before it was created.
+
+#### waitForEmail
+
+```ts
+const email = await inbox.waitForEmail({
+  from: "noreply@example.com",    // filter by sender
+  subject: "verification",         // contains match by default
+  subjectMatch: "exact",           // or "contains" (default)
+  timeoutMs: 60_000,               // default: 120000 (2 min)
+  pollIntervalMs: 5000,            // default: 3000 (3 sec)
+});
+```
+
+Throws `EmailTimeoutError` if no match arrives within the timeout.
+
+#### extractFromEmail
+
+Returns `{ data, reason }`. Throws `EmailExtractionError` on failure.
+
+```ts
+// String extraction
+const { data: otp } = await inbox.extractFromEmail({
+  id: email.id,
+  prompt: "Extract the 6-digit OTP code",
+});
+
+// Structured extraction with Zod schema
+import { z } from "zod";
+const { data } = await inbox.extractFromEmail({
+  id: email.id,
+  prompt: "Extract the verification URL and expiration time",
+  schema: z.object({ url: z.string().url(), expiresIn: z.string() }),
+});
+```
+
+#### Inbox Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `address` | string | Full email address (with suffix if provided) |
+| `suffix` | string \| undefined | The suffix passed to `Inbox.build()` |
+| `createdAt` | Date | Inbox creation time; emails before this are auto-filtered |
+
+#### listEmails
+
+```ts
+const { emails, nextCursor } = await inbox.listEmails(options?);
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `from` | string | — | Filter by sender address |
+| `subject` | string | — | Filter by subject |
+| `subjectMatch` | `'contains'` \| `'exact'` | `'contains'` | Subject matching mode |
+| `limit` | number | 20 | Max results (max: 100) |
+| `cursor` | string | — | Pagination cursor from previous `nextCursor` |
+| `since` | Date | — | Override the default creation-time filter |
+| `includeOlder` | boolean | false | Include emails received before inbox creation |
+
+#### Other Methods
+
+```ts
+const email = await inbox.getEmail(id);                          // get by ID
+await inbox.deleteEmail(email.id);                               // delete single
+await inbox.deleteAllEmails();                                   // delete all (this inbox only)
+```
+
+#### Email Object Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Unique identifier |
+| `mailbox` | string | Container (e.g., `"INBOX"`) |
+| `from` | `{ address: string, name?: string }` | Sender |
+| `to` | `{ address: string, name?: string }[]` | Recipients |
+| `subject` | string | Subject line |
+| `receivedAt` | Date | Arrival timestamp |
+| `text` | string? | Plain text body |
+| `html` | string[]? | HTML body parts |
+
+#### Playwright Fixture Pattern
+
+```ts
+import { test as base } from "@stablyai/playwright-test";
+import { Inbox } from "@stablyai/email";
+
+const test = base.extend<{ inbox: Inbox }>({
+  inbox: async ({}, use, testInfo) => {
+    const inbox = await Inbox.build({ suffix: `test-${testInfo.testId}` });
+    await use(inbox);
+    await inbox.deleteAllEmails();
+  },
+});
+
+test("signup flow", async ({ page, inbox }) => {
+  await page.fill("#email", inbox.address);
+  await page.click("#signup");
+  const email = await inbox.waitForEmail({ subject: "Welcome" });
+  // ...
+});
 ```
 
 ### Finding Your Organization's Email Address
