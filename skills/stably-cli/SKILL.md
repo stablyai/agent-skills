@@ -195,6 +195,9 @@ export default defineConfig({
 
 ## CI/CD: GitHub Actions
 
+### Important CI patterns
+- **Use `continue-on-error: true`** on test, fix, and PR steps so the pipeline can run fix/PR steps after failures — but **always add a final step that fails the workflow** if tests failed. Without `continue-on-error` on the fix/PR steps, a failure there blocks downstream steps.
+
 ### Self-healing test pipeline
 
 ```yaml
@@ -208,34 +211,47 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - run: npm ci
-      - run: npx stably install --with-deps
+      - name: Install browsers
+        run: npx stably install --with-deps
       - name: Run tests
         id: test
-        run: npx stably --env staging test || echo "TEST_FAILED=true" >> "$GITHUB_ENV"
-        env:
-          STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
-          STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
-      - name: Auto-fix failures
-        if: env.TEST_FAILED == 'true'
-        run: npx stably --env staging fix
-        env:
-          STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
-          STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
-      - name: Re-run tests after fix
-        if: env.TEST_FAILED == 'true'
+        continue-on-error: true
         run: npx stably --env staging test
         env:
           STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
           STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
-      - name: Commit fixes
-        if: env.TEST_FAILED == 'true' && github.event_name == 'push'
+      - name: Auto-fix failures
+        if: steps.test.outcome == 'failure'
+        continue-on-error: true
+        run: npx stably --env staging fix
+        env:
+          STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
+          STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
+      - name: Create PR with fixes
+        if: steps.test.outcome == 'failure'
+        continue-on-error: true
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          # Adjust paths to match your project's test directories
-          git add 'tests/' 'e2e/' '**/*.spec.ts' '**/*.test.ts' 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "fix: auto-repair failing tests [skip ci]"
-          git push
+          if [ -n "$(git status --porcelain)" ]; then
+            BRANCH="stably-fix/$(date +%Y%m%d-%H%M%S)"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -b "$BRANCH"
+            git add -A
+            git commit -m "fix: auto-repair failing tests"
+            git push origin "$BRANCH"
+            gh pr create \
+              --title "fix: auto-repair failing tests" \
+              --body "Automated PR from Stably Fix after test failures in run #${{ github.run_number }}." \
+              --base "${{ github.ref_name }}" \
+              --head "$BRANCH"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Fail if tests failed
+        if: steps.test.outcome == 'failure'
+        run: |
+          echo "::error::Tests failed"
+          exit 1
 ```
 
 ## Troubleshooting
