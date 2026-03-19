@@ -4,7 +4,7 @@ description: Expert assistant for the Stably CLI tool. Prefer "npx stably test" 
 license: MIT
 metadata:
   author: stably
-  version: '1.1.1'
+  version: '1.2.0'
 ---
 
 # Stably CLI Assistant
@@ -28,7 +28,7 @@ AI-assisted Playwright test management: create, run, fix, and maintain tests via
 | Run tests with remote env | `stably --env staging test` |
 | Fix failing tests | `stably fix [runId]` |
 | Initialize project | `stably init` |
-| Install browsers | `stably install [--with-deps]` |
+| Install browsers | `stably install` |
 | List remote environments | `stably env list` |
 | Inspect env variables | `stably env inspect <name>` |
 | Auth | `stably login` / `logout` / `whoami` |
@@ -115,9 +115,9 @@ Lists recent test runs for the current project.
 - `-n, --limit <number>` — max results (default 20, max 100)
 - `--after <runId>` / `--before <runId>` — cursor-based pagination by run ID
 - `--source <source>` — filter by source (`local`, `ci`, `web`)
-- `-s, --status <status>` — filter by status (e.g. `passed`, `failed`)
+- `-s, --status <status>` — filter by status: `queued`, `running`, `passed`, `failed`, `timedout`, `cancelled`, `interrupted`
 - `--suite <name>` — filter by test suite
-- `--trigger <trigger>` — filter by trigger type
+- `--trigger <trigger>` — filter by trigger type: `manual`, `scheduled`, `ui`, `api`, `github_action`, `suite_run`
 - `--json` — output as JSON (preferred for AI agents)
 
 ```bash
@@ -212,7 +212,10 @@ jobs:
         with: { node-version: '20' }
       - run: npm ci
       - name: Install browsers
-        run: npx stably install --with-deps
+        run: npx stably install
+        env:
+          STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
+          STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
       - name: Run tests
         id: test
         continue-on-error: true
@@ -261,7 +264,7 @@ jobs:
 | "Not authenticated" | `stably login` |
 | API key not recognized | `stably whoami` to verify |
 | Tests in wrong directory | `stably create "..." --output ./tests/e2e` |
-| Missing browser | `stably install --with-deps` |
+| Missing browser | `stably install` |
 | Traces not uploading | Set `trace: 'on'` in `playwright.config.ts` |
 | "Run ID not found" | Run `stably test` first, then `stably fix` |
 
