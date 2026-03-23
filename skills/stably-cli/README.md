@@ -17,6 +17,8 @@ npx skills add stablyai/agent-skills --skill stably-cli
 - Verifying app behavior with `stably verify`
 - Checking test run history with `stably runs list`
 - Viewing run details with `stably runs view`
+- Analyzing flaky tests with `stably analytics flaky`
+- Analyzing test failures with `stably analytics failures`
 - Setting up Stably CLI in a new environment
 
 ## What It Does
@@ -32,6 +34,7 @@ Provides guidance for all Stably CLI commands:
 - **Test Repair**: `stably fix [runId]` for AI-powered fixes
 - **Verification**: `stably verify <prompt>` for behavior checks without generating test files
 - **Run History**: `stably runs list`, `stably runs view <runId>` for historical context across sessions
+- **Analytics**: `stably analytics flaky`, `stably analytics failures` for test health insights
 
 ## Quick Reference
 
@@ -47,6 +50,8 @@ Provides guidance for all Stably CLI commands:
 | `stably verify "description"` | Verify app behavior |
 | `stably runs list` | List recent test runs |
 | `stably runs view <runId>` | View run details |
+| `stably analytics flaky` | Show most flaky tests by flaky rate |
+| `stably analytics failures` | Show most failing tests by failure rate |
 
 ## Related
 
