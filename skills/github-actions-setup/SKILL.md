@@ -47,8 +47,14 @@ Step 1 of 5: Detecting your project setup...
 ### 1a. Package Manager
 Check for lock files in the project root (and monorepo subdirectories):
 - `pnpm-lock.yaml` -> pnpm
-- `yarn.lock` -> yarn
+- `yarn.lock` -> yarn (then check version — see 1f)
 - `package-lock.json` -> npm
+
+### 1f. Yarn Version Detection (if yarn detected)
+- Check for `.yarnrc.yml` -> yarn berry (v2+)
+- Check `packageManager` field in `package.json` (e.g., `"yarn@4.1.0"`) -> berry if >= 2
+- If neither exists, assume yarn classic (v1)
+- This matters: berry uses `--immutable`, classic uses `--frozen-lockfile`; berry requires `corepack enable`, classic does not
 
 ### 1b. Node.js Version
 Check for version hints:
@@ -140,6 +146,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
       STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
@@ -159,6 +166,14 @@ jobs:
 
       - name: Run tests
         run: npx stably test
+
+      - name: Upload test artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
 ```
 
 ### Template: pnpm
@@ -174,6 +189,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
       STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
@@ -196,9 +212,17 @@ jobs:
 
       - name: Run tests
         run: pnpm exec stably test
+
+      - name: Upload test artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
 ```
 
-### Template: yarn
+### Template: yarn berry (v2+)
 
 ```yaml
 name: Stably E2E Tests
@@ -211,6 +235,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
       STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
@@ -233,7 +258,61 @@ jobs:
 
       - name: Run tests
         run: yarn stably test
+
+      - name: Upload test artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
 ```
+
+### Template: yarn classic (v1)
+
+```yaml
+name: Stably E2E Tests
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      STABLY_API_KEY: ${{ secrets.STABLY_API_KEY }}
+      STABLY_PROJECT_ID: ${{ secrets.STABLY_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install browsers
+        run: npx stably install
+
+      - name: Run tests
+        run: npx stably test
+
+      - name: Upload test artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+```
+
+> **Note:** Yarn classic (v1) is pre-installed on GitHub runners — no `corepack enable` needed.
+> Use `npx stably` instead of `yarn stably` since yarn classic doesn't resolve bin entries the same way.
 
 ### Monorepo Adaptation
 
@@ -249,20 +328,31 @@ jobs:
     # ... rest of job
 ```
 
-And adjust the cache path for pnpm:
+And adjust the `cache-dependency-path` so `setup-node` finds the lockfile:
 ```yaml
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: 'packages/app/pnpm-lock.yaml'
+# pnpm
+cache-dependency-path: 'packages/app/pnpm-lock.yaml'
+# npm
+cache-dependency-path: 'packages/app/package-lock.json'
+# yarn
+cache-dependency-path: 'packages/app/yarn.lock'
 ```
+
+> **Note:** `defaults.run.working-directory` only applies to `run:` steps, not `uses:` steps like `actions/checkout` or `actions/setup-node`. This is correct — you want to checkout at the repo root.
 
 ### Self-Healing Addition
 
-If the user chose self-healing (option 2), append these steps after the test step:
+If the user chose self-healing (option 2), add `permissions` at the job level and append these steps after the test step:
 
 ```yaml
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    # ... env, steps as before, then:
+
       - name: Run tests
         id: test
         continue-on-error: true
@@ -278,7 +368,7 @@ If the user chose self-healing (option 2), append these steps after the test ste
         continue-on-error: true
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            BRANCH="stably-fix/$(date +%Y%m%d-%H%M%S)"
+            BRANCH="stably-fix/${{ github.run_id }}"
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git checkout -b "$BRANCH"
@@ -288,11 +378,19 @@ If the user chose self-healing (option 2), append these steps after the test ste
             gh pr create \
               --title "fix: auto-repair failing tests" \
               --body "Automated PR from Stably Fix after test failures in run #${{ github.run_number }}." \
-              --base "${{ github.ref_name }}" \
+              --base "${{ github.event.pull_request.base.ref || github.ref_name }}" \
               --head "$BRANCH"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload test artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
 
       - name: Fail if tests failed
         if: steps.test.outcome == 'failure'
@@ -301,18 +399,29 @@ If the user chose self-healing (option 2), append these steps after the test ste
           exit 1
 ```
 
-**Important:** When using self-healing, the test step MUST have `id: test` and `continue-on-error: true` so downstream steps can still run. The final "Fail if tests failed" step ensures the workflow still reports failure.
+**Important:**
+- The `permissions` block is required — without `contents: write` and `pull-requests: write`, the push and PR creation will fail with 403 errors.
+- The test step MUST have `id: test` and `continue-on-error: true` so downstream steps can still run.
+- The `--base` uses `github.event.pull_request.base.ref` on PR events (where `github.ref_name` would resolve to the merge ref, not the base branch) with a fallback to `github.ref_name` for push events.
+- Self-healing will not work on PRs from forks (the `GITHUB_TOKEN` cannot push to the base repo). Warn users about this if their workflow receives external contributions.
+- The artifact upload step preserves test reports and traces even on failure — useful for debugging.
 
 ### Scheduled Addition
 
-If the user chose scheduled (option 3), add a cron trigger:
+If the user chose scheduled (option 3), add cron and manual triggers alongside the existing push/PR triggers:
 
 ```yaml
 on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
   schedule:
     - cron: '0 6 * * *'  # Daily at 6 AM UTC
-  workflow_dispatch:  # Allow manual triggers
+  workflow_dispatch:  # Allow manual triggers from the Actions tab
 ```
+
+If the user wants schedule-only (no push/PR), remove the `push` and `pull_request` triggers.
 
 ---
 
