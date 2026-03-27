@@ -72,15 +72,24 @@ Check for version hints:
 - Check for `workspaces` in root `package.json`, `pnpm-workspace.yaml`, or `lerna.json`
 - If monorepo detected, identify the `working-directory` for the workflow
 
-### 1e. Existing Workflows
+### 1e. Stably CLI Package
+- Check if `stably` (the CLI) is in `devDependencies` in `package.json`
+- This is separate from `@stablyai/playwright-test` (the SDK) — the SDK does NOT include the CLI
+- If `stably` is missing, flag it — the workflow will fail with `stably: command not found`
+- Offer to install it: `npm install -D stably` (or pnpm/yarn equivalent)
+
+### 1f. Existing Workflows
 - Check if `.github/workflows/` already exists
 - Look for existing Playwright or test workflows to avoid conflicts
 - If a Stably workflow already exists, offer to update it instead
+
+### 1g. Yarn Version Detection (if yarn detected)
 
 **Report findings:**
 ```
 Detected setup:
 - Package manager: [pnpm/yarn/npm]
+- Stably CLI (`stably`): [installed / MISSING — needs install]
 - Node.js version: [version]
 - Playwright config: [path]
 - Test directory: [path]
@@ -132,6 +141,7 @@ These are real failure modes from production — the generated workflow MUST add
 5. **Env vars must be on each step** - GitHub Actions env vars set at job level OR must be repeated on each `run:` step that needs them. Prefer job-level `env:` to avoid forgetting.
 6. **Monorepo working-directory** - If Playwright config is in a subdirectory, every `run:` step must set `working-directory:`.
 7. **`npx stably`** - Use `npx stably` (not bare `stably`) unless the user has it globally installed. `npx` resolves from the project's local `node_modules`.
+8. **`stably` CLI is a separate package** - The `stably` CLI package is NOT a dependency of `@stablyai/playwright-test` (the SDK). Users must have `stably` in their `devDependencies` for `npx stably` to work. If it's missing, the skill should add it. Check `package.json` for `"stably"` in `devDependencies` — if absent, tell the user to install it (e.g., `npm install -D stably`).
 
 ### Template: npm
 
@@ -404,6 +414,7 @@ jobs:
 - The test step MUST have `id: test` and `continue-on-error: true` so downstream steps can still run.
 - The `--base` uses `github.event.pull_request.base.ref` on PR events (where `github.ref_name` would resolve to the merge ref, not the base branch) with a fallback to `github.ref_name` for push events.
 - Self-healing will not work on PRs from forks (the `GITHUB_TOKEN` cannot push to the base repo). Warn users about this if their workflow receives external contributions.
+- `stably fix` auto-detects the run ID in GitHub Actions via the `GITHUB_RUN_ID` environment variable (automatically set by GitHub). No explicit run ID argument is needed.
 - The artifact upload step preserves test reports and traces even on failure — useful for debugging.
 
 ### Scheduled Addition
