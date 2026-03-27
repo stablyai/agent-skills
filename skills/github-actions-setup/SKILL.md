@@ -136,7 +136,7 @@ These are real failure modes from production — the generated workflow MUST add
 2. **yarn (berry/v2+) requires corepack** - Same as pnpm. For yarn classic (v1), it's pre-installed on GitHub runners.
 3. **Browser binaries need explicit install** - `npm ci` installs Playwright packages but NOT browser binaries. Must run `stably install --with-deps chromium` as a separate step. `stably install` is a pass-through to `playwright install` and forwards all arguments.
 4. **`--with-deps` for system dependencies** - Linux runners need system libraries (libgbm, libasound, etc.). The `--with-deps` flag installs them. Without it, browser launch fails with missing library errors. Specifying `chromium` (instead of all browsers) speeds up the install.
-5. **Env vars must be on each step** - GitHub Actions env vars set at job level OR must be repeated on each `run:` step that needs them. Prefer job-level `env:` to avoid forgetting.
+5. **Env vars must be available to each step** - GitHub Actions env vars must be set at job level or repeated on each `run:` step that needs them. Prefer job-level `env:` to avoid forgetting.
 6. **Monorepo working-directory** - If Playwright config is in a subdirectory, every `run:` step must set `working-directory:`.
 7. **`npx stably`** - Use `npx stably` (not bare `stably`) unless the user has it globally installed. `npx` resolves from the project's local `node_modules`.
 8. **`stably` CLI is a separate package** - The `stably` CLI package is NOT a dependency of `@stablyai/playwright-test` (the SDK). Users must have `stably` in their `devDependencies` for `npx stably` to work. If it's missing, the skill should add it. Check `package.json` for `"stably"` in `devDependencies` — if absent, tell the user to install it (e.g., `npm install -D stably`).
@@ -275,6 +275,9 @@ jobs:
           path: playwright-report/
           retention-days: 30
 ```
+
+> **Note:** Yarn berry (v2+) resolves local bin entries via `yarn <bin>`, so `yarn stably` works directly.
+> This does NOT work in yarn classic — see the classic template below.
 
 ### Template: yarn classic (v1)
 
