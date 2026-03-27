@@ -522,9 +522,9 @@ Happy testing!
 ## Important Guidelines
 
 - **Detect, don't assume** - Always check the project for package manager, config location, and structure
-- **Use `npx stably` / `pnpm exec stably` / `yarn stably`** - Never use bare `stably` command in CI
+- **Use `npx stably` / `pnpm exec stably` / `yarn stably` (berry) / `npx stably` (yarn classic)** - Never use bare `stably` command in CI
 - **Job-level env vars** - Put `STABLY_API_KEY` and `STABLY_PROJECT_ID` at the job level to avoid repetition
-- **corepack before setup-node** - For pnpm and yarn, `corepack enable` MUST come before `actions/setup-node` because setup-node needs the package manager binary to set up caching
+- **corepack before setup-node** - For pnpm and yarn berry (v2+), `corepack enable` MUST come before `actions/setup-node` because setup-node needs the package manager binary to set up caching. Yarn classic (v1) does not need corepack.
 - **`--frozen-lockfile` / `--immutable`** - Always use lockfile-strict install in CI to prevent drift
 - **Browser install is separate** - `npm ci` does NOT install browser binaries; always add the explicit install step
 - **Monorepo awareness** - If playwright config is in a subdirectory, set `working-directory` on the job
