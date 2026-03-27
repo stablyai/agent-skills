@@ -47,43 +47,41 @@ Step 1 of 5: Detecting your project setup...
 ### 1a. Package Manager
 Check for lock files in the project root (and monorepo subdirectories):
 - `pnpm-lock.yaml` -> pnpm
-- `yarn.lock` -> yarn (then check version — see 1f)
+- `yarn.lock` -> yarn (then check version — see 1b)
 - `package-lock.json` -> npm
 
-### 1f. Yarn Version Detection (if yarn detected)
+### 1b. Yarn Version Detection (if yarn detected)
 - Check for `.yarnrc.yml` -> yarn berry (v2+)
 - Check `packageManager` field in `package.json` (e.g., `"yarn@4.1.0"`) -> berry if >= 2
 - If neither exists, assume yarn classic (v1)
 - This matters: berry uses `--immutable`, classic uses `--frozen-lockfile`; berry requires `corepack enable`, classic does not
 
-### 1b. Node.js Version
+### 1c. Node.js Version
 Check for version hints:
 - `.nvmrc` or `.node-version` file
 - `engines.node` in `package.json`
 - Default to `'20'` if not specified
 
-### 1c. Test Directory and Playwright Config
+### 1d. Test Directory and Playwright Config
 - Find `playwright.config.ts` / `playwright.config.js` / `playwright.config.mjs`
 - Read the `testDir` setting from the config
 - If no config found, check for common test directories: `tests/`, `e2e/`, `test/`
 
-### 1d. Monorepo Detection
+### 1e. Monorepo Detection
 - Check if `playwright.config.*` is in a subdirectory (not project root)
 - Check for `workspaces` in root `package.json`, `pnpm-workspace.yaml`, or `lerna.json`
 - If monorepo detected, identify the `working-directory` for the workflow
 
-### 1e. Stably CLI Package
+### 1f. Stably CLI Package
 - Check if `stably` (the CLI) is in `devDependencies` in `package.json`
 - This is separate from `@stablyai/playwright-test` (the SDK) — the SDK does NOT include the CLI
 - If `stably` is missing, flag it — the workflow will fail with `stably: command not found`
 - Offer to install it: `npm install -D stably` (or pnpm/yarn equivalent)
 
-### 1f. Existing Workflows
+### 1g. Existing Workflows
 - Check if `.github/workflows/` already exists
 - Look for existing Playwright or test workflows to avoid conflicts
 - If a Stably workflow already exists, offer to update it instead
-
-### 1g. Yarn Version Detection (if yarn detected)
 
 **Report findings:**
 ```
@@ -179,7 +177,7 @@ jobs:
 
       - name: Upload test artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
@@ -225,7 +223,7 @@ jobs:
 
       - name: Upload test artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
@@ -271,7 +269,7 @@ jobs:
 
       - name: Upload test artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
@@ -314,7 +312,7 @@ jobs:
 
       - name: Upload test artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
@@ -396,7 +394,7 @@ jobs:
 
       - name: Upload test artifacts
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
@@ -414,7 +412,8 @@ jobs:
 - The test step MUST have `id: test` and `continue-on-error: true` so downstream steps can still run.
 - The `--base` uses `github.event.pull_request.base.ref` on PR events (where `github.ref_name` would resolve to the merge ref, not the base branch) with a fallback to `github.ref_name` for push events.
 - Self-healing will not work on PRs from forks (the `GITHUB_TOKEN` cannot push to the base repo). Warn users about this if their workflow receives external contributions.
-- `stably fix` auto-detects the run ID in GitHub Actions via the `GITHUB_RUN_ID` environment variable (automatically set by GitHub). No explicit run ID argument is needed.
+- `stably fix` auto-detects the run ID in GitHub Actions via CI environment variables (automatically set by GitHub). No explicit run ID argument is needed.
+- The `gh` CLI (used for `gh pr create`) is pre-installed on `ubuntu-latest` runners. If using a custom runner image, ensure `gh` is available.
 - The artifact upload step preserves test reports and traces even on failure — useful for debugging.
 
 ### Scheduled Addition
