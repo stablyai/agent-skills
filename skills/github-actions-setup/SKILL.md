@@ -127,7 +127,7 @@ These are real failure modes from production — the generated workflow MUST add
 
 1. **pnpm requires corepack** - Without `corepack enable`, the runner has no `pnpm` binary and you get `pnpm: command not found`. Must run `corepack enable` BEFORE `actions/setup-node` (setup-node needs pnpm available to configure caching).
 2. **yarn (berry/v2+) requires corepack** - Same as pnpm. For yarn classic (v1), it's pre-installed on GitHub runners.
-3. **Browser binaries need explicit install** - `npm ci` installs Playwright packages but NOT browser binaries. Must run `npx playwright install --with-deps chromium` as a separate step. Use `playwright install` directly (not `stably install`) because `stably install` doesn't add `--with-deps` automatically.
+3. **Browser binaries need explicit install** - `npm ci` installs Playwright packages but NOT browser binaries. Must run `stably install --with-deps chromium` as a separate step. `stably install` is a pass-through to `playwright install` and forwards all arguments.
 4. **`--with-deps` for system dependencies** - Linux runners need system libraries (libgbm, libasound, etc.). The `--with-deps` flag installs them. Without it, browser launch fails with missing library errors. Specifying `chromium` (instead of all browsers) speeds up the install.
 5. **Env vars must be on each step** - GitHub Actions env vars set at job level OR must be repeated on each `run:` step that needs them. Prefer job-level `env:` to avoid forgetting.
 6. **Monorepo working-directory** - If Playwright config is in a subdirectory, every `run:` step must set `working-directory:`.
@@ -162,7 +162,7 @@ jobs:
         run: npm ci
 
       - name: Install browsers
-        run: npx playwright install --with-deps chromium
+        run: npx stably install --with-deps chromium
 
       - name: Run tests
         run: npx stably test
@@ -208,7 +208,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec stably install --with-deps chromium
 
       - name: Run tests
         run: pnpm exec stably test
@@ -254,7 +254,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Install browsers
-        run: yarn playwright install --with-deps chromium
+        run: yarn stably install --with-deps chromium
 
       - name: Run tests
         run: yarn stably test
@@ -297,7 +297,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Install browsers
-        run: npx playwright install --with-deps chromium
+        run: npx stably install --with-deps chromium
 
       - name: Run tests
         run: npx stably test
