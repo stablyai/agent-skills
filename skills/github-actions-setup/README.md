@@ -37,8 +37,8 @@ The skill detects your project setup and generates a `.github/workflows/stably-e
 | Pitfall | What goes wrong | How the skill handles it |
 |---------|----------------|------------------------|
 | Missing corepack | `pnpm: command not found` | Adds `corepack enable` before `setup-node` |
-| Missing browsers | `browserType.launch: Executable doesn't exist` | Adds `npx stably install` step |
-| Bare `stably` command | `stably: command not found` | Uses `npx stably` / `pnpm exec stably` |
+| Missing browsers | `browserType.launch: Executable doesn't exist` | Adds `stably install --with-deps chromium` step |
+| Bare `stably` command | `stably: command not found` | Uses `npx stably` / `pnpm exec stably`; ensures `stably` package is in devDependencies |
 | Missing env vars | Auth failures in CI | Sets job-level env from GitHub Secrets |
 | Monorepo path | Tests run in wrong directory | Sets `working-directory` on the job |
 

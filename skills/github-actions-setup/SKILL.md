@@ -496,7 +496,7 @@ Next steps:
 3. Watch the run in the Actions tab
 
 Troubleshooting:
-- "stably: command not found" -> ensure @stablyai/playwright-test is in package.json
+- "stably: command not found" -> ensure `stably` is in package.json devDependencies (this is the CLI package; `@stablyai/playwright-test` is the SDK)
 - "browser not found" -> the 'Install browsers' step should handle this
 - Auth errors -> verify your GitHub Secrets are set correctly
 - pnpm not found -> ensure corepack enable runs before setup-node
