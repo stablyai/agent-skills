@@ -34,6 +34,7 @@ No test files are created — it verifies and reports.
 | `stably verify "..." --url <url>` | Verify with specific starting URL |
 | `stably verify "..." --max-budget 10` | Set budget cap (default: $5) |
 | `stably verify "..." --no-interactive` | Non-interactive mode for CI |
+| `stably verify "..." --browser cloud` | Use cloud browser |
 
 Exit codes: `0` = PASS, `1` = FAIL, `2` = INCONCLUSIVE
 

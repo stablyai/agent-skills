@@ -10,6 +10,7 @@ npx skills add stablyai/agent-skills --skill stably-cli
 
 ## When to Use
 
+- Planning test coverage with `stably plan`
 - Creating Playwright tests with AI using `stably create`
 - Running tests with `stably test`
 - Running tests with remote environments using `stably --env <name> test`
@@ -28,6 +29,7 @@ Provides guidance for all Stably CLI commands:
 - **Authentication**: `stably login`, `stably logout`, `stably whoami`
 - **Setup**: `stably init`, `stably install`
 - **Interactive Agent**: `stably` (no args) — **human only**, hangs AI agents
+- **Coverage Planning**: `stably plan [prompt]` to discover gaps and generate `test.fixme()` skeletons
 - **Test Creation**: `stably create <prompt>` for headless test generation
 - **Test Execution**: `stably test` with Stably reporter
 - **Remote Environments**: `stably env list`, `stably env inspect`, and `stably --env <name> test`
@@ -42,6 +44,8 @@ Provides guidance for all Stably CLI commands:
 |---------|-------------|
 | `stably` | Interactive chat — **do NOT use from AI agents** |
 | `stably init` | Initialize project |
+| `stably plan` | Discover coverage gaps, generate `test.fixme()` skeletons |
+| `stably plan "focus on X"` | Scoped coverage plan |
 | `stably create <prompt>` | Create tests with AI |
 | `stably test` | Run tests |
 | `stably --env <name> test` | Run tests with named remote environment variables |
@@ -55,5 +59,6 @@ Provides guidance for all Stably CLI commands:
 
 ## Related
 
+- [stably-plan](../stably-plan) - Coverage planning and `test.fixme()` generation
 - [stably-sdk-setup](../stably-sdk-setup) - Full SDK setup assistant
 - [stably-sdk-rules](../stably-sdk-rules) - AI rules for writing tests
