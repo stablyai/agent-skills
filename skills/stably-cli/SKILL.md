@@ -59,7 +59,7 @@ AI-assisted Playwright test management: plan, create, run, fix, and maintain tes
 
 ### `stably plan [prompt...]`
 
-Discovers coverage gaps by exploring the codebase and generates `test.fixme()` skeleton files. Accepts an optional prompt to scope the plan to specific areas.
+Discovers coverage gaps by exploring the codebase and generates `test.fixme()` skeleton files with priority tags (`@p0`–`@p3`). Without a prompt, analyzes the entire app; with a prompt, scopes discovery to that area.
 
 ```bash
 stably plan                                         # full autonomous discovery
@@ -67,7 +67,11 @@ stably plan "focus on checkout and auth"             # scoped plan
 stably plan "plan tests for features in this PR"     # PR-scoped
 ```
 
-Outputs `test.fixme()` spec files with priority tags (`@p0`–`@p3`). These upgrade in place to real `test()` blocks via `stably create`. See the `stably-plan` skill for full details on output format, priority model, and lifecycle.
+Outputs one spec file per group in the repo's existing test directory. Each file contains `test.describe()` flows with `test.fixme()` scenarios. Existing files with real `test()` implementations are never modified. Safe to re-run (idempotent, max 200 flows per invocation).
+
+**Typical workflow:** `stably plan` → team reviews/adjusts priorities → `stably create "implement all @p0 tests"` → `stably test` → `stably fix`
+
+Also writes key project discoveries (auth patterns, framework conventions) to `STABLY.md` for future agent runs.
 
 ### `stably create [prompt...]`
 

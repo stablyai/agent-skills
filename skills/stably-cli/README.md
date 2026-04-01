@@ -59,6 +59,5 @@ Provides guidance for all Stably CLI commands:
 
 ## Related
 
-- [stably-plan](../stably-plan) - Coverage planning and `test.fixme()` generation
 - [stably-sdk-setup](../stably-sdk-setup) - Full SDK setup assistant
 - [stably-sdk-rules](../stably-sdk-rules) - AI rules for writing tests
