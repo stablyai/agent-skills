@@ -11,7 +11,7 @@ description: |
 license: MIT
 metadata:
   author: stably
-  version: '1.0.0'
+  version: '1.1.0'
 ---
 
 # Verify App Behavior with stably verify
@@ -42,6 +42,9 @@ stably verify "checkout flow completes successfully" --max-budget 10
 
 # Non-interactive mode (for CI or background agents)
 stably verify "checkout flow completes" --no-interactive
+
+# Use cloud browser instead of local
+stably verify "login works" --browser cloud
 ```
 
 ### Options
@@ -51,6 +54,7 @@ stably verify "checkout flow completes" --no-interactive
 | `-u, --url <url>` | Starting URL (auto-detected from localhost if omitted) |
 | `--max-budget <dollars>` | Budget cap in USD (default: `5`) |
 | `--no-interactive` | Skip preflight prompts |
+| `--browser <type>` | Browser type: `local` or `cloud` (default: `local`). Also settable via `STABLY_CLOUD_BROWSER=1` |
 
 ### Exit Codes
 
