@@ -53,7 +53,7 @@ AI-assisted Playwright test management: plan, create, run, fix, and maintain tes
 | `--verbose` / `-v` | Verbose logging |
 | `--no-telemetry` | Disable telemetry |
 
-**Env var precedence** (highest → lowest): Stably auth (`STABLY_API_KEY`) → `--env` → `--env-file` → `process.env`
+**Env var precedence** (highest → lowest): Stably auth (`STABLY_API_KEY`) → `process.env` → `--env-file` → `--env`
 
 ## Core Commands
 
