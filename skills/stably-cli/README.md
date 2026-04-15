@@ -31,7 +31,7 @@ Provides guidance for all Stably CLI commands:
 - **Interactive Agent**: `stably` (no args) — **human only**, hangs AI agents
 - **Coverage Planning**: `stably plan [prompt]` to discover gaps and generate `test.fixme()` skeletons
 - **Test Creation**: `stably create <prompt>` for headless test generation
-- **Test Execution**: `stably test` with Stably reporter
+- **Test Execution**: `stably test` with Stably reporter (supports `--suiteName` to override the reported name)
 - **Remote Environments**: `stably env list`, `stably env inspect`, and `stably --env <name> test`
 - **Test Repair**: `stably fix [runId]` for AI-powered fixes
 - **Verification**: `stably verify <prompt>` for behavior checks without generating test files
@@ -48,6 +48,7 @@ Provides guidance for all Stably CLI commands:
 | `stably plan "focus on X"` | Scoped coverage plan |
 | `stably create <prompt>` | Create tests with AI |
 | `stably test` | Run tests |
+| `stably test --suiteName="name"` | Run tests with a custom suite name |
 | `stably --env <name> test` | Run tests with named remote environment variables |
 | `stably env inspect <name>` | Inspect available variables in a remote env |
 | `stably fix [runId]` | Auto-fix failures |

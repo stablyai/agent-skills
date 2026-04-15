@@ -27,6 +27,7 @@ AI-assisted Playwright test management: plan, create, run, fix, and maintain tes
 | Generate test from prompt | `stably create "description"` |
 | Generate test from branch diff | `stably create` (no prompt) |
 | Run tests | `stably test` |
+| Run tests with custom name | `stably test --suiteName="nightly"` |
 | Run tests with remote env | `stably --env staging test` |
 | Fix failing tests | `stably fix [runId]` |
 | Initialize project | `stably init` |
@@ -98,7 +99,10 @@ Runs Playwright tests with Stably reporter. Auto-enables `--trace=on`. All Playw
 stably test --headed --project=chromium --workers=4
 stably test --grep="login" tests/login.spec.ts
 stably --env staging test --headed
+stably test --suiteName="nightly smoke tests"
 ```
+
+- `--suiteName <name>` — Override the reported suite name shown on the dashboard and in Slack notifications. When omitted, defaults to the full list of Playwright project names being run (sorted alphabetically, joined with `, `). Also settable via `STABLY_SUITE_NAME` env var or `stablyReporter({ suiteName: "..." })` in Playwright config.
 
 ### `stably fix [runId]`
 
